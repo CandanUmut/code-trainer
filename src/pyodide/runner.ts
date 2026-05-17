@@ -119,11 +119,13 @@ async function runSingleTest(
   const inputJson = JSON.stringify(test.input);
   const expectedJson = JSON.stringify(test.expected);
 
-  // Return a JSON string — PyProxy dot-access is unreliable, plain string is safe
+  // The result must be assigned then referenced at top level — a try/except
+  // statement itself has no return value, so runPythonAsync would get None.
   const testCode = `
 import json as _json
 import traceback as _traceback
 
+_out = None
 try:
     _ns = {}
     exec(${JSON.stringify(userCode)}, _ns)
@@ -137,10 +139,12 @@ try:
     _actual = _fn(*_inputs)
 
     _passed = _deep_equal(_actual, _expected)
-    _json.dumps({"passed": bool(_passed), "actual": _serialize(_actual), "error": None})
+    _out = _json.dumps({"passed": bool(_passed), "actual": _serialize(_actual), "error": None})
 except Exception as _e:
     _tb = _traceback.format_exc()
-    _json.dumps({"passed": False, "actual": None, "error": _tb})
+    _out = _json.dumps({"passed": False, "actual": None, "error": _tb})
+
+_out
 `;
 
   const TIMEOUT_MS = 3000;
