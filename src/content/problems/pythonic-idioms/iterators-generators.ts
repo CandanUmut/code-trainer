@@ -67,11 +67,28 @@ class Cycle:
 def take(n: int, iterable: Iterable[T]) -> list[T]:
     from itertools import islice
     return list(islice(iterable, n))`,
-    walkthrough: `\`__iter__\` returns \`self\` — this makes \`Cycle\` both an iterable and an iterator. For reusable iterables, return a new iterator object from \`__iter__\`; since cycling resets automatically via the modulo, returning \`self\` is fine here.
-
-\`self._idx % len(self._seq)\` wraps around automatically — no need to reset the index. We just let it grow unboundedly (for practical sequences this is fine; add a reset if you're worried about overflow on astronomically long sequences).
-
-\`itertools.islice\` is the canonical way to take a prefix from a lazy iterator without materializing the whole thing.`,
+    steps: [
+      {
+        lines: [5, 8],
+        explanation: '`list(sequence)` creates a private copy so external mutations don\'t affect the cycle. `_idx` starts at 0 and grows monotonically — the modulo wrapping in `__next__` makes it cycle automatically without any explicit reset.',
+      },
+      {
+        lines: [10, 11],
+        explanation: '`__iter__` returning `self` makes `Cycle` simultaneously an *iterable* (can be passed to `for`) and an *iterator* (has `__next__`). This is appropriate here because the cycle has no notion of "rewinding" — each `for` loop always continues from where the last one left off.',
+      },
+      {
+        lines: [13, 18],
+        explanation: '`__next__` raises `StopIteration` on an empty sequence (the mandatory contract for exhausted iterators). `self._idx % len(self._seq)` is the core trick — integer modulo wraps the ever-growing index back into the valid range, producing the cycling behavior without bounds checks.',
+        stateAfter: [
+          { name: '_idx=0,seq=[1,2,3]', value: 'yields 1' },
+          { name: '_idx=3,seq=[1,2,3]', value: 'yields 1 (wraps around)' },
+        ],
+      },
+      {
+        lines: [20, 22],
+        explanation: '`itertools.islice(iterable, n)` lazily consumes exactly `n` elements from any iterator without materializing the rest. Wrapping in `list()` collects the results. This works with infinite iterators like `Cycle` because `islice` stops after `n` elements.',
+      },
+    ],
     complexity: 'O(1) per __next__ call, O(n) for take(n)',
   },
 

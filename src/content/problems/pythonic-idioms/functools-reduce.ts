@@ -44,11 +44,24 @@ def top_scorer(records: list[dict]) -> str:
         records
     )
     return best["name"]`,
-    walkthrough: `\`reduce\` with a comparator lambda acts like a running maximum: it keeps whichever of \`a\` and \`b\` has the higher score, then compares that winner against the next element.
-
-Note: \`max(records, key=lambda r: r["score"])["name"]\` is even cleaner for this specific case — but \`reduce\` shines when the aggregation is stateful or requires building up a structure.
-
-The \`operator.attrgetter\` / \`operator.itemgetter\` versions avoid lambdas: \`max(records, key=operator.itemgetter("score"))\`.`,
+    steps: [
+      {
+        lines: [1, 1],
+        explanation: '`functools.reduce` is imported — it is not a built-in in Python 3 (unlike Python 2). It folds a binary function over a sequence left to right: `f(f(f(a, b), c), d) ...`.',
+      },
+      {
+        lines: [3, 7],
+        explanation: '`reduce` with the lambda `lambda a, b: a if a["score"] >= b["score"] else b` acts as a running maximum: after each comparison, the "winner" (higher-scored record) becomes the new accumulator `a`. After all records are processed, `best` is the record with the highest score.',
+        stateAfter: [
+          { name: 'after step 1', value: 'a = {"Alice": 92} vs b = {"Bob": 88} → a wins' },
+          { name: 'after step 2', value: 'a = {"Alice": 92} vs b = {"Carol": 95} → b wins' },
+        ],
+      },
+      {
+        lines: [8, 8],
+        explanation: '`best["name"]` extracts the name from the winning record. Note: `max(records, key=lambda r: r["score"])["name"]` is more readable for this specific case — `reduce` demonstrates the pattern but `max` is preferred when Python has a built-in for the aggregation.',
+      },
+    ],
     complexity: 'O(n) time, O(1) space',
   },
 

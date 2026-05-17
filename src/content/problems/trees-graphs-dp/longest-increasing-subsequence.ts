@@ -44,11 +44,31 @@ def length_of_lis(nums: list[int]) -> int:
         else:
             tails[pos] = num
     return len(tails)`,
-    walkthrough: `\`tails\` represents the "piles" from patience sorting. Each pile holds the smallest-possible tail for an IS of that length.
-
-When \`num > tails[-1]\`, it extends the longest IS found so far, so we append. When \`num <= tails[-1]\`, it fits somewhere in the middle — \`bisect_left\` finds the first tail ≥ \`num\`, and replacing it with \`num\` keeps that pile's tail as small as possible (greedy choice).
-
-\`tails\` length after processing all elements equals the LIS length. Note: \`tails\` itself is not a valid IS — it's a bookkeeping structure.`,
+    steps: [
+      {
+        lines: [1, 4],
+        explanation: '`bisect` provides binary search on sorted lists, giving O(log n) lookup. `tails` is the patience-sorting bookkeeping array: `tails[i]` is the smallest tail element of any increasing subsequence of length `i+1` seen so far. It is always sorted.',
+      },
+      {
+        lines: [5, 6],
+        explanation: '`bisect.bisect_left(tails, num)` finds the leftmost position where `num` could be inserted to keep `tails` sorted. This is O(log n) — the key improvement over the naive O(n) search that makes the whole algorithm O(n log n).',
+      },
+      {
+        lines: [7, 8],
+        explanation: 'If `pos == len(tails)`, `num` is larger than every current tail — it can extend the longest subsequence found so far. Appending grows `tails` by one, increasing the known LIS length.',
+        stateAfter: [
+          { name: 'tails grows', value: 'LIS length increases by 1' },
+        ],
+      },
+      {
+        lines: [9, 10],
+        explanation: 'Otherwise, `num` replaces `tails[pos]` — a greedy optimization. Replacing a larger tail with a smaller one (`num`) keeps `tails[pos]` as small as possible, giving future elements the best chance of extending a subsequence of that length. This does not change `len(tails)` but improves future possibilities.',
+      },
+      {
+        lines: [11, 11],
+        explanation: '`len(tails)` equals the length of the longest increasing subsequence. Note: `tails` itself is not a valid LIS — it is purely a bookkeeping structure. The actual subsequence elements would require separate tracking.',
+      },
+    ],
     complexity: 'O(n log n) time, O(n) space',
   },
 

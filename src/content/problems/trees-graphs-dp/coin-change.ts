@@ -39,11 +39,27 @@ coins = [2], amount = 3            →  -1
             if dp[a - coin] + 1 < dp[a]:
                 dp[a] = dp[a - coin] + 1
     return dp[amount] if dp[amount] != float("inf") else -1`,
-    walkthrough: `\`dp[a]\` means "minimum coins to make amount \`a\`". We initialize to infinity (impossible) except \`dp[0] = 0\`.
-
-For each coin, we update every amount ≥ coin: if using this coin reduces the count (\`dp[a-coin] + 1 < dp[a]\`), we take it. Starting at \`range(coin, ...)\` means \`a - coin >= 0\` is always true.
-
-After processing all coins, \`dp[amount]\` holds the answer. Infinity means the amount can't be reached.`,
+    steps: [
+      {
+        lines: [1, 3],
+        explanation: '`dp[a]` will hold the minimum coins needed to make amount `a`. Initializing to `float("inf")` represents "unreachable". The base case `dp[0] = 0` is critical: zero coins are needed to make amount zero, and all other subproblems build on this.',
+      },
+      {
+        lines: [4, 5],
+        explanation: 'Outer loop over coins, inner loop over amounts — this is the unbounded knapsack pattern. `range(coin, amount + 1)` ensures `a - coin >= 0`, so we never access a negative index. Because each coin can be used unlimited times, we allow `dp[a - coin]` to itself have been built using the same coin.',
+        stateAfter: [
+          { name: 'dp state (coins=[1,5,6,9], amount=11)', value: '[0, inf, inf, inf, inf, inf, inf, inf, inf, inf, inf, inf]' },
+        ],
+      },
+      {
+        lines: [6, 7],
+        explanation: 'The recurrence: using `coin` to reach amount `a` costs `dp[a - coin] + 1`. We update `dp[a]` only when this is strictly better than the current value — greedy local choice that leads to the global optimum via optimal substructure.',
+      },
+      {
+        lines: [8, 8],
+        explanation: 'If `dp[amount]` is still infinity after trying every coin, the amount is unreachable and we return `-1`. Otherwise return the computed minimum coin count.',
+      },
+    ],
     complexity: 'O(amount × len(coins)) time, O(amount) space',
   },
 

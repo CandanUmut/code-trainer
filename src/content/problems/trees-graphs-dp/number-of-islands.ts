@@ -70,11 +70,31 @@ grid = [
                 dfs(r, c)
                 count += 1
     return count`,
-    walkthrough: `The outer loop finds any unvisited land cell and triggers a DFS. The DFS recursively marks all connected land as water (\`'0'\`), effectively "consuming" the island.
-
-The boundary check and \`grid[r][c] != '1'\` check are combined into a single guard at the top of \`dfs\`. This is cleaner than pre-filtering neighbors before the recursive call.
-
-We count how many times the outer loop triggers a DFS — each trigger is a new island.`,
+    steps: [
+      {
+        lines: [1, 4],
+        explanation: 'Guard for empty grid, then capture dimensions. Using `rows` and `cols` as named variables makes the boundary checks below more readable than repeating `len(grid)` and `len(grid[0])`.',
+      },
+      {
+        lines: [6, 8],
+        explanation: 'The single compound guard at the top of `dfs` handles both out-of-bounds and non-land cells in one check. This "early return" pattern is cleaner than filtering neighbors before recursing — we let the recursion handle all cases uniformly.',
+      },
+      {
+        lines: [9, 9],
+        explanation: 'Marking the cell `"0"` before recursing is the visited-set equivalent for grids. By mutating in place we avoid allocating a separate `visited` set. Any cell we\'ve already processed will fail the `grid[r][c] != "1"` check on re-entry.',
+      },
+      {
+        lines: [10, 11],
+        explanation: 'The four direction offsets `[(-1,0),(1,0),(0,-1),(0,1)]` enumerate the four cardinal neighbors. Recursing into all four flood-fills the entire connected land region from the starting cell.',
+      },
+      {
+        lines: [13, 19],
+        explanation: 'The outer loop scans every cell. When it finds an unvisited land cell (`"1"`), it triggers DFS which floods the entire island to `"0"`. `count` increments once per island — not once per land cell. Finally we return the island count.',
+        stateAfter: [
+          { name: 'count', value: 'number of distinct islands found' },
+        ],
+      },
+    ],
     complexity: 'O(m·n) time and space (recursion stack in worst case)',
   },
 

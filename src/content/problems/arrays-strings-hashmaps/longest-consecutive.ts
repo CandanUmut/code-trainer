@@ -45,11 +45,32 @@ nums = [0,3,7,2,5,8,4,6,0,1]  →  9
                 length += 1
             best = max(best, length)
     return best`,
-    walkthrough: `Converting to a set deduplicates and enables O(1) lookups.
-
-We only begin counting from a number \`num\` where \`num - 1\` is absent — that's the start of a new sequence. This is the key optimization: without it, we'd re-count every element of every sequence.
-
-From each sequence start, we extend forward (\`num+1\`, \`num+2\`, ...) using the set. The while loop for a sequence of length L runs L times, but each element starts exactly one sequence, so total work across all sequences is O(n).`,
+    steps: [
+      {
+        lines: [1, 2],
+        explanation: '`set(nums)` deduplicates the input and gives O(1) membership testing — both properties are essential. `best = 0` tracks the longest sequence found so far (works even if `nums` is empty).',
+      },
+      {
+        lines: [3, 4],
+        explanation: 'We iterate over `num_set`, not `nums`, to skip duplicates. The guard `if num - 1 not in num_set` is the key optimization: we only start counting from the *beginning* of a sequence. Without this, starting from every element would re-count each sequence multiple times.',
+        stateAfter: [
+          { name: 'num (e.g. 1)', value: '1' },
+          { name: 'num-1 (0) in set?', value: 'False → start counting' },
+        ],
+      },
+      {
+        lines: [5, 6],
+        explanation: '`length = 1` seeds the counter for the current sequence. The while loop extends it by checking `num + length` — i.e., the next expected number. Each step increments `length` as long as the consecutive successor exists in the set.',
+      },
+      {
+        lines: [7, 7],
+        explanation: '`best` is updated only after the while loop exhausts the current sequence. Because each number can only be the start of one sequence (the guard ensures this), total while-loop iterations across all outer-loop iterations is O(n).',
+      },
+      {
+        lines: [8, 8],
+        explanation: 'Return the maximum consecutive sequence length found. The O(n) guarantee holds because every element is visited at most twice: once as a potential start (outer loop) and once during an extension (while loop).',
+      },
+    ],
     complexity: 'O(n) time, O(n) space',
   },
 

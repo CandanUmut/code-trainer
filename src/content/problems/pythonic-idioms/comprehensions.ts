@@ -41,11 +41,24 @@ transposed = [[row[i] for row in matrix] for i in range(len(matrix[0]))]
         word: {ch: word.count(ch) for ch in set(word) if word.count(ch) > 1}
         for word in words
     }`,
-    walkthrough: `The outer comprehension maps each word to its inner dict. The inner comprehension iterates over the *unique* characters (\`set(word)\`) and filters to those with count > 1.
-
-\`word.count(ch)\` is O(n) and called twice per character — more efficient would be \`Counter(word)\`, but here we deliberately show comprehension nesting.
-
-The result is fully computed in two nested comprehension levels, each with a filter clause (\`if word.count(ch) > 1\`).`,
+    steps: [
+      {
+        lines: [1, 5],
+        explanation: 'The entire function body is a single nested dict comprehension. The outer level `{ word: ... for word in words }` iterates over each word and maps it to the result of the inner comprehension.',
+      },
+      {
+        lines: [3, 3],
+        explanation: 'The inner comprehension `{ch: word.count(ch) for ch in set(word) if word.count(ch) > 1}` does three things: `set(word)` deduplicates characters so each is considered once; `word.count(ch)` computes the frequency; the `if` clause filters out characters appearing only once.',
+        stateAfter: [
+          { name: 'inner dict for "hello"', value: "{'l': 2}" },
+          { name: 'inner dict for "world"', value: '{}' },
+        ],
+      },
+      {
+        lines: [2, 5],
+        explanation: 'The outer comprehension closes the dict and returns it. Each word becomes a key; words with no repeated characters map to an empty dict `{}`. This two-level nesting replaces what would otherwise be two nested loops with explicit `.append()` calls.',
+      },
+    ],
     complexity: 'O(n·k²) where k is average word length',
   },
 

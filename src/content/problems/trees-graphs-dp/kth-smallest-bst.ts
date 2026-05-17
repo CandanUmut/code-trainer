@@ -49,11 +49,27 @@ def kth_smallest(root: dict | None, k: int) -> int:
         if i == k:
             return val
     raise ValueError("k exceeds tree size")`,
-    walkthrough: `The generator \`inorder\` yields values in sorted order without materializing the full list. \`yield from\` delegates to recursive sub-generators cleanly.
-
-\`enumerate(inorder(root), 1)\` pairs each yielded value with its rank (1-indexed). We stop the moment we reach rank \`k\` — early termination on a large tree.
-
-This is O(H + k) time where H is tree height, rather than O(n) if we collected all values first.`,
+    steps: [
+      {
+        lines: [3, 4],
+        explanation: 'The `inorder` inner function is a generator — it `yield`s values lazily rather than building a list. This is key to early termination: we can stop as soon as we have the k-th value without traversing the rest of the tree.',
+      },
+      {
+        lines: [5, 9],
+        explanation: 'The inorder traversal pattern for BSTs: recurse left → yield current → recurse right. This produces values in strictly ascending order (a fundamental BST property). `yield from` cleanly delegates to the recursive sub-generators without manual iteration.',
+      },
+      {
+        lines: [11, 13],
+        explanation: '`enumerate(inorder(root), 1)` pairs each yielded BST value with its 1-based rank in sorted order. We stop and return the moment `i == k` — early termination means we do not traverse nodes after the k-th smallest.',
+        stateAfter: [
+          { name: 'nodes visited', value: 'H (height) + k at most' },
+        ],
+      },
+      {
+        lines: [14, 14],
+        explanation: 'If the loop exhausts the generator without finding rank k, k exceeds the number of nodes in the tree. Raising `ValueError` makes this contract violation explicit rather than silently returning `None`.',
+      },
+    ],
     complexity: 'O(H + k) time, O(H) space (recursion stack)',
   },
 

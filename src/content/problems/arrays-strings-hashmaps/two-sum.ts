@@ -55,13 +55,36 @@ def two_sum(nums: list[int], target: int) -> list[int]:
             return [seen[complement], i]
         seen[num] = i
     return []  # guaranteed to find one by problem statement`,
-    walkthrough: `We use \`seen\` to map each number to its index as we go.
-
-For each \`num\` at index \`i\`, we compute \`complement = target - num\` — the value we *need* to form \`target\`. If \`complement\` is already in \`seen\`, we've previously encountered exactly what we need, so we return \`[seen[complement], i]\`.
-
-If not, we store \`seen[num] = i\` and move on. We never need to look back further because: if a valid pair exists, one element will be the "complement seeker" and the other will already be in \`seen\` when we reach it.
-
-The \`enumerate\` call avoids manual index tracking with \`range(len(nums))\` — idiomatic Python.`,
+    steps: [
+      {
+        lines: [1, 1],
+        explanation: 'The `Optional` import is included for completeness but the return type is `list[int]`. Line 1 sets up the typing import.',
+      },
+      {
+        lines: [2, 3],
+        explanation: '`seen: dict[int, int] = {}` is the central data structure: it maps each number we have encountered to the index where we saw it. Starting empty, it will grow as we scan the array.',
+      },
+      {
+        lines: [4, 5],
+        explanation: '`enumerate` gives us both the index `i` and the value `num` in one pass, avoiding manual `range(len(nums))`. For each number we immediately compute the `complement = target - num` — the *other* value needed to reach the target.',
+        stateAfter: [
+          { name: 'num (e.g. nums[0]=2)', value: '2' },
+          { name: 'complement', value: 'target - 2 = 7' },
+        ],
+      },
+      {
+        lines: [6, 7],
+        explanation: 'If `complement` is already in `seen`, we previously recorded the exact number we need. We return both indices immediately — `seen[complement]` is the earlier index, `i` is the current one. This is the O(1) lookup that makes the whole algorithm O(n).',
+      },
+      {
+        lines: [8, 8],
+        explanation: 'If no pair was found yet, we store `seen[num] = i`. This "registers" the current number so future iterations can find it as a complement. We never need a nested loop because any valid partner will find *us* when it runs its own complement check.',
+      },
+      {
+        lines: [9, 9],
+        explanation: 'The problem guarantees exactly one solution, so this line is a safety fallback. It documents the contract: if the loop ends without returning, no valid pair existed.',
+      },
+    ],
     complexity: 'O(n) time, O(n) space',
   },
 

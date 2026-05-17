@@ -64,11 +64,32 @@ class Encoder(Registry, name="encoder"):
 class Decoder(Registry, name="decoder"):
     def decode(self, s: str) -> bytes:
         return bytes.fromhex(s)`,
-    walkthrough: `\`__init_subclass__\` receives keyword arguments from the class definition. \`class Encoder(Registry, name="encoder"):\` triggers \`Registry.__init_subclass__(cls=Encoder, name="encoder")\`.
-
-We store \`cls\` (the subclass) in the shared \`_registry\` dict. \`_registry\` is defined on \`Registry\` as a class variable, so it's shared across all instances and subclasses — one global registry.
-
-This pattern replaces metaclasses for the common "register subclasses" use case, and it's much simpler.`,
+    steps: [
+      {
+        lines: [1, 2],
+        explanation: '`_registry` is a **class variable** on `Registry` — a single dict shared across all instances and subclasses. Every subclass registration goes into the same dict, giving us a global plugin registry.',
+        stateAfter: [{ name: 'Registry._registry', value: '{}' }],
+      },
+      {
+        lines: [4, 7],
+        explanation: '`__init_subclass__` is called by Python automatically whenever a class subclasses `Registry`. The `name` keyword from the class definition (e.g., `class Encoder(Registry, name="encoder")`) arrives here as a parameter. We only register if a name was provided — this lets abstract intermediate classes exist without names.',
+      },
+      {
+        lines: [5, 5],
+        explanation: 'Calling `super().__init_subclass__(**kwargs)` forwards any remaining keyword args up the MRO. This is essential for cooperative multiple inheritance — skipping it would break chains involving other base classes that also define `__init_subclass__`.',
+      },
+      {
+        lines: [9, 11],
+        explanation: '`get` is a class method so it works without an instance. It does a simple dict lookup by name, returning `None` if not found — a safe interface for dynamic plugin resolution.',
+      },
+      {
+        lines: [18, 24],
+        explanation: 'Usage: each subclass passes `name=...` as a keyword argument to the class definition, which Python routes to `__init_subclass__`. After these class definitions, `Registry._registry` maps `"encoder"` and `"decoder"` to their respective classes.',
+        stateAfter: [
+          { name: 'Registry._registry', value: '{"encoder": <class Encoder>, "decoder": <class Decoder>}' },
+        ],
+      },
+    ],
     complexity: 'O(1) per registration, O(1) lookup',
   },
 

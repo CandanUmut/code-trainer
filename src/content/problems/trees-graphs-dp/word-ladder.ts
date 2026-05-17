@@ -58,11 +58,35 @@ def word_ladder(begin_word: str, end_word: str, word_list: list[str]) -> int:
                     visited.add(candidate)
                     queue.append((candidate, steps + 1))
     return 0`,
-    walkthrough: `Instead of precomputing an adjacency list, we generate neighbors on-the-fly by trying each position with each letter (26 × word_length candidates per word).
-
-We check \`candidate == end_word\` before the \`word_set\` check because \`end_word\` might not be in \`word_set\` after we dequeue it... actually here it is guaranteed. This micro-optimization returns as soon as we first construct the end word.
-
-Marking visited at enqueue time is critical — without it, BFS degenerates when many words share one-letter transitions.`,
+    steps: [
+      {
+        lines: [3, 6],
+        explanation: 'Convert `word_list` to a set for O(1) membership tests. Early return if `end_word` is not reachable at all — no valid transformation sequence can end at a word outside the dictionary.',
+      },
+      {
+        lines: [7, 8],
+        explanation: 'Initialize the BFS queue with `(begin_word, 1)` — step count 1 because the first word counts in the sequence length. `visited` is seeded with `begin_word` to prevent revisiting it. Marking visited at *enqueue* time (not dequeue) is critical for O(V+E) performance.',
+      },
+      {
+        lines: [9, 13],
+        explanation: 'Neighbor generation on-the-fly: try every position `i` in the word, try every letter `ch`, build the candidate. This is `26 × word_length` candidates per word — no precomputed adjacency list needed.',
+        stateAfter: [
+          { name: 'candidates per word', value: '26 × len(word)' },
+        ],
+      },
+      {
+        lines: [14, 15],
+        explanation: 'Check for `end_word` immediately when a candidate is constructed. Returning `steps + 1` at this point guarantees the shortest path — BFS explores level by level, so the first time we reach `end_word` is via the fewest transformations.',
+      },
+      {
+        lines: [16, 18],
+        explanation: 'For valid intermediate words (in the word set and not yet visited), add to `visited` before enqueuing. This prevents duplicate entries in the queue which would degrade BFS to exponential time on dense word graphs.',
+      },
+      {
+        lines: [19, 19],
+        explanation: 'Queue exhausted without finding `end_word` — no valid transformation sequence exists. Return 0 as specified by the problem.',
+      },
+    ],
     complexity: 'O(n × L × 26) where n = word list size, L = word length',
   },
 

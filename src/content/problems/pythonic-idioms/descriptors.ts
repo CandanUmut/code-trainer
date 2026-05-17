@@ -66,11 +66,28 @@ cfg.retries = 3     # OK
                 f"{self.attr_name} must be in [{self.min_val}, {self.max_val}], got {value}"
             )
         obj.__dict__[self.attr_name] = value`,
-    walkthrough: `\`__set_name__\` is called when the class is defined — it gives the descriptor the name of the attribute it's assigned to (\`"timeout"\` or \`"retries"\`). This lets us store per-instance values in \`obj.__dict__\` under the correct name.
-
-\`__get__\` returns \`self\` when called on the class (not an instance) — convention for descriptors that want \`Config.timeout\` to return the descriptor itself.
-
-\`obj.__dict__[self.attr_name]\` bypasses the descriptor protocol for storage, preventing infinite recursion that would occur if we stored to an attribute sharing the descriptor's name.`,
+    steps: [
+      {
+        lines: [1, 5],
+        explanation: '`__init__` stores the valid range and initializes `attr_name` to an empty string. The attribute name is not known at construction time — it will be filled in by `__set_name__` when the descriptor is assigned as a class attribute.',
+      },
+      {
+        lines: [7, 8],
+        explanation: '`__set_name__` is called automatically by the metaclass when the class body is executed. It receives the owning class and the name of the attribute (`"timeout"`, `"retries"`, etc.), letting the descriptor know which name to use for per-instance storage.',
+      },
+      {
+        lines: [10, 13],
+        explanation: '`__get__` is called on attribute read. When `obj is None`, the descriptor is accessed on the *class* (e.g., `Config.timeout`) — by convention we return `self` (the descriptor object). For instance access, we read from `obj.__dict__` directly, bypassing the descriptor protocol to avoid infinite recursion.',
+      },
+      {
+        lines: [15, 20],
+        explanation: '`__set__` validates the value before storing. Storing into `obj.__dict__[self.attr_name]` bypasses the descriptor protocol — if we instead did `setattr(obj, self.attr_name, value)`, Python would call `__set__` again, causing infinite recursion.',
+        stateAfter: [
+          { name: 'cfg.timeout = 30', value: 'stored in cfg.__dict__["timeout"]' },
+          { name: 'cfg.timeout = -1', value: 'raises ValueError' },
+        ],
+      },
+    ],
     complexity: 'O(1) per access',
   },
 

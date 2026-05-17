@@ -71,11 +71,31 @@ def serialize(obj: Any) -> str:
 
 def deserialize(s: str) -> Any:
     return json.loads(s, object_hook=decode_hook)`,
-    walkthrough: `The encoder's \`default\` method is called for any type that the base encoder can't handle. We check types in order: datetime → set → dataclass → unknown (raises TypeError).
-
-The \`object_hook\` in \`json.loads\` is called for *every* dict parsed. We check the \`__type__\` tag; if absent, return \`d\` unchanged.
-
-Dataclass deserialization is trickier (we need the class reference to reconstruct) — the worked example omits that for simplicity, focusing on datetime and set round-trips.`,
+    steps: [
+      {
+        lines: [6, 9],
+        explanation: '`ExtendedEncoder.default` is called by `json.dumps` only for types it cannot handle natively. `datetime` is serialized as a tagged dict with `__type__` and an ISO string — the type tag is the key to round-tripping: the decoder uses it to distinguish a real `{"__type__": "datetime"}` from a plain dict.',
+      },
+      {
+        lines: [10, 11],
+        explanation: '`set` is serialized as a sorted list of string values. Sorting ensures deterministic JSON output — sets are unordered, so the same set would otherwise produce different JSON strings on different runs.',
+      },
+      {
+        lines: [12, 14],
+        explanation: '`is_dataclass(obj) and not isinstance(obj, type)` distinguishes dataclass *instances* from the dataclass *classes themselves* (which are also technically dataclasses). Falling through to `super().default()` raises `TypeError` for completely unknown types — the right behavior.',
+      },
+      {
+        lines: [16, 22],
+        explanation: '`object_hook` is called for **every** dict parsed from JSON, bottom-up. Checking `__type__` and returning non-dict Python objects for tagged dicts is the standard pattern. If `__type__` is absent or unrecognized, `return d` passes the dict through unchanged.',
+        stateAfter: [
+          { name: 'decode_hook({"__type__": "datetime", "value": "2024-01-15T10:30:00"})', value: 'datetime(2024, 1, 15, 10, 30)' },
+        ],
+      },
+      {
+        lines: [24, 28],
+        explanation: '`serialize` and `deserialize` are thin wrappers that pass the custom encoder and hook to `json.dumps`/`json.loads`. The wrappers provide a clean API — callers don\'t need to know the internal details of `ExtendedEncoder` or `decode_hook`.',
+      },
+    ],
     complexity: 'O(n) where n is the size of the serialized data',
   },
 

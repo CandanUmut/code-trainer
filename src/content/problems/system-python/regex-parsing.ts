@@ -67,11 +67,32 @@ def parse_log_line(line: str) -> Optional[dict]:
         "service": d["service"],
         "message": d["message"],
     }`,
-    walkthrough: `\`re.VERBOSE\` lets us split the pattern across lines and add whitespace for readability. The actual match still works — \`re.VERBOSE\` just strips whitespace and comments from the pattern string.
-
-Named groups (\`(?P<name>...)\`) let us use \`m.groupdict()\` to get a clean dict of all captures, rather than positional \`m.group(1)\`, \`m.group(2)\`, etc.
-
-We strip the line before matching to handle trailing newlines from file I/O.`,
+    steps: [
+      {
+        lines: [1, 3],
+        explanation: 'Import `re` for regex and `Optional` for the nullable return type. Pre-compiling the pattern at module level (rather than inside the function) avoids recompiling on every call — the compiled pattern object is cached and reused.',
+      },
+      {
+        lines: [4, 10],
+        explanation: '`re.VERBOSE` allows whitespace and newlines in the pattern for readability. The actual regex ignores these — `re.VERBOSE` strips unescaped whitespace and everything after `#` on each line. This is critical for complex patterns: the alternative is one unreadable string.',
+      },
+      {
+        lines: [11, 16],
+        explanation: 'Named groups `(?P<name>...)` capture each field with a descriptive name. This is why `m.groupdict()` later works — it returns a dict keyed by group name rather than by position. `\\w+` matches the log level, `\\S+` matches the service name (no spaces), and `.+` greedily captures the rest as the message.',
+      },
+      {
+        lines: [18, 21],
+        explanation: '`line.strip()` handles trailing newlines from file I/O before matching. If the pattern doesn\'t match, return `None` — this is the clean way to signal "not a valid log line" without exceptions.',
+      },
+      {
+        lines: [22, 28],
+        explanation: '`m.groupdict()` returns all named captures as a single dict. We then reshape it: combine the six date/time components into a single timestamp string, and extract the remaining fields. The final return value is the parsed representation.',
+        stateAfter: [
+          { name: 'd["year"]', value: '"2024"' },
+          { name: 'return["timestamp"]', value: '"2024-01-15 10:23:45"' },
+        ],
+      },
+    ],
     complexity: 'O(n) where n is line length',
   },
 

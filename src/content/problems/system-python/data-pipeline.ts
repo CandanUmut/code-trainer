@@ -47,11 +47,32 @@ def filter_and_sort_csv(csv_string: str, threshold: float) -> str:
         writer.writeheader()
         writer.writerows(rows)
     return output.getvalue()`,
-    walkthrough: `\`io.StringIO(csv_string)\` creates an in-memory file-like object. \`DictReader\` consumes it row by row, turning each into a dict keyed by column headers.
-
-We collect rows into a list (to sort), filter with a float comparison, then sort descending. Finally, \`DictWriter\` writes back to another \`StringIO\` buffer using the same fieldnames.
-
-\`reader.fieldnames\` becomes available after iteration starts — it's read from the header row. We access it after the list comprehension.`,
+    steps: [
+      {
+        lines: [1, 5],
+        explanation: '`io.StringIO(csv_string)` creates an in-memory file-like object — the CSV module only knows how to read from file-like objects, not raw strings. `DictReader` consumes it row by row, using the first line as column headers and returning each subsequent row as a `dict`.',
+      },
+      {
+        lines: [6, 6],
+        explanation: 'Filter and collect in one list comprehension. The `float()` conversion is necessary because `DictReader` returns all values as strings — comparing strings would give wrong results (`"9" > "10"` is True lexicographically). After this line, `reader.fieldnames` is also populated.',
+        stateAfter: [
+          { name: 'rows (threshold=80)', value: '[{"name": ..., "score": "95", ...}, ...]' },
+          { name: 'reader.fieldnames', value: '["name", "score", "grade"]' },
+        ],
+      },
+      {
+        lines: [7, 7],
+        explanation: 'Sort in-place descending by score. Using a separate `.sort()` after the list comprehension is cleaner than combining filter+sort into one expression. The lambda converts each score to `float` again for correct numeric ordering.',
+      },
+      {
+        lines: [9, 13],
+        explanation: '`io.StringIO()` as an output buffer lets us use `DictWriter` without touching the real filesystem. `reader.fieldnames` (populated after iteration) gives us the original column order. The `if rows:` guard avoids writing an empty CSV with only a header.',
+      },
+      {
+        lines: [14, 14],
+        explanation: '`output.getvalue()` extracts the entire contents of the in-memory buffer as a string. This is the CSV result, ready to return or serialize further.',
+      },
+    ],
     complexity: 'O(n log n) due to sort',
   },
 

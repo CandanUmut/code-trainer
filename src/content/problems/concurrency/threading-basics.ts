@@ -64,11 +64,29 @@ def test_counter_concurrency(n_threads: int, ops_per_thread: int) -> int:
     for t in threads: t.start()
     for t in threads: t.join()
     return counter.value`,
-    walkthrough: `The \`Lock\` is acquired before any read-modify-write operation and released after. \`with self._lock:\` is the idiomatic way — it releases even if an exception is raised.
-
-Even the \`value\` property acquires the lock — without it, a thread could read a partially-updated value on 32-bit platforms (though in CPython, \`int\` reads are atomic in practice).
-
-We capture \`counter\` in a lambda default (\`lambda: ...\`) — but here it's already in scope. The threads list comprehension creates N threads before starting any, which is fine.`,
+    steps: [
+      {
+        lines: [3, 6],
+        explanation: 'Each `Counter` instance owns its own `threading.Lock`. Making the lock an instance variable ensures that two independent `Counter` objects don\'t contend with each other — unlike a module-level lock which would serialize all counter operations globally.',
+      },
+      {
+        lines: [8, 14],
+        explanation: '`with self._lock:` acquires the lock on entry and **always** releases it on exit, even if an exception is raised. This context manager pattern is the idiomatic and safe way to use locks in Python — never use `acquire()`/`release()` directly, as exceptions can leave the lock held.',
+      },
+      {
+        lines: [16, 19],
+        explanation: 'Even the read-only `value` property acquires the lock. On 64-bit CPython, `int` reads happen to be atomic, but this is an implementation detail. Locking makes the behavior correct across all platforms and avoids subtle bugs on multi-core systems.',
+      },
+      {
+        lines: [21, 26],
+        explanation: 'Create all threads before starting any. The list comprehension builds N thread objects; the lambda closes over `counter` and `ops_per_thread` from the enclosing scope. Creating threads first, then starting them all, gives the best chance of actual concurrency.',
+      },
+      {
+        lines: [27, 29],
+        explanation: 'Start all threads (`.start()`), then wait for each to finish (`.join()`). The two-pass pattern — start all first, then join all — allows threads to run concurrently rather than sequentially (start-then-immediately-join would serialize them).',
+        stateAfter: [{ name: 'counter.value', value: 'n_threads * ops_per_thread (exact, no data races)' }],
+      },
+    ],
     complexity: 'O(n) with O(1) per operation amortized',
   },
 
