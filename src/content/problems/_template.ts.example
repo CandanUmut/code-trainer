@@ -1,0 +1,60 @@
+/**
+ * Problem template — copy this file, rename it, fill in the fields.
+ * File must be placed under the correct category subfolder.
+ * It will be auto-discovered via the glob import in src/content/index.ts.
+ */
+import type { Problem } from '../../../types';
+
+const problem: Problem = {
+  id: 'unique-slug',                 // kebab-case, stable — used in URLs and localStorage
+  title: 'Human-Readable Title',
+  category: 'arrays-strings-hashmaps', // one of the 6 Category values
+  difficulty: 'medium',              // 'easy' | 'medium' | 'hard'
+  tags: ['tag1', 'tag2'],
+
+  // --- Teaching section ---
+  concept: `## Concept Title
+
+Explain the underlying technique in ~100 words. Include a short code snippet.
+Use fenced code blocks with \`\`\`python.
+`,
+
+  workedExample: {
+    problem: `Problem statement in markdown. Include examples:
+\`\`\`
+input → output
+\`\`\``,
+    solution: `def example_fn(arg: type) -> type:
+    # Fully annotated, idiomatic Python 3.11+
+    pass`,
+    walkthrough: `Explain *why* the solution works, line by line.
+Focus on the non-obvious parts.`,
+    complexity: 'O(n) time, O(1) space',
+  },
+
+  // --- Exercise section ---
+  exercise: {
+    problem: `A *different* problem that exercises the same technique.
+Include examples.`,
+    functionName: 'function_to_implement',
+    starterCode: `def function_to_implement(arg: type) -> type:
+    """Docstring explaining what to implement."""
+    ...`,
+    tests: [
+      // Visible tests shown before first attempt
+      { name: 'Descriptive name', input: [/* args */], expected: /* expected value */ null },
+      // Hidden tests revealed after passing or giving up
+      { name: 'Edge case', input: [/* args */], expected: null, hidden: true },
+    ],
+    referenceSolution: `def function_to_implement(arg: type) -> type:
+    # Shown only after user passes all tests or clicks "show solution"
+    pass`,
+    hints: [
+      'First hint — broad direction',
+      'Second hint — more specific',
+      'Third hint — almost the answer',
+    ],
+  },
+};
+
+export default problem;
