@@ -83,11 +83,36 @@ Split paths with \`path.strip('/').split('/')\` — handles both \`/a/b\` and \`
 
     def exists(self, path: str) -> bool:
         return self._traverse(path) is not None`,
-    walkthrough: `\`_traverse\` is the core helper: split the path, walk the tree, optionally creating intermediate dirs. Returning \`None\` signals "path not found."
-
-\`write\` separates the parent directory path from the filename, traverses to the parent (creating dirs), and inserts a new file node.
-
-The root node is always a directory at \`/\`. An empty path or \`/\` traversal returns the root.`,
+    steps: [
+      {
+        lines: [1, 9],
+        explanation: 'The filesystem is a tree of `_Node` objects. Each node tracks `is_dir`, `content` (only meaningful for files), and `children` (only meaningful for directories). The `FS` root is always a directory, serving as the implicit `/`.',
+        stateAfter: [
+          { name: 'self._root.is_dir', value: 'True' },
+          { name: 'self._root.children', value: '{}' },
+        ],
+      },
+      {
+        lines: [11, 20],
+        explanation: '`_traverse` is the core helper. It strips leading/trailing slashes, splits on `/`, and walks down the tree one component at a time. The `create_dirs` flag determines behavior on a missing component: return `None` (not found) or create a new directory node and continue.',
+      },
+      {
+        lines: [22, 23],
+        explanation: '`mkdir` is a one-liner: just call `_traverse` with `create_dirs=True`. The traverse function handles all intermediate directory creation. The return value is discarded — we only care about the side effect.',
+      },
+      {
+        lines: [25, 32],
+        explanation: '`write` splits the path into parent directory and filename, traverses to the parent (creating any missing intermediate directories), then inserts a new file node. The parent traversal handles the case where the parent path is empty (file at root).',
+      },
+      {
+        lines: [34, 44],
+        explanation: '`read` and `ls` both use `_traverse` to find the node, then validate its type: `read` requires a file (not a dir), `ls` requires a directory. `sorted(node.children.keys())` ensures deterministic output regardless of insertion order.',
+      },
+      {
+        lines: [46, 47],
+        explanation: '`exists` is simply a null check on the traverse result — if `_traverse` returns a node, the path exists; `None` means it does not. This covers both files and directories uniformly.',
+      },
+    ],
     complexity: 'O(d) per operation where d is path depth',
   },
 

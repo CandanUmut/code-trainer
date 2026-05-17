@@ -49,11 +49,24 @@ C = TypeVar("C", bound=Comparable)
 
 def sorted_desc(items: Sequence[C]) -> list[C]:
     return sorted(items, reverse=True)`,
-    walkthrough: `The Protocol defines the interface purely through method signatures. Any object with \`__lt__\`, \`__le__\`, etc. satisfies it — \`int\`, \`str\`, \`float\`, your custom classes.
-
-\`TypeVar("C", bound=Comparable)\` means "C can be any type that is at least Comparable." This is a bounded TypeVar, not just \`Any\`.
-
-\`sorted(..., reverse=True)\` works for any Comparable type — the type variable ensures the return type matches the input type (\`list[C]\`, not \`list[Any]\`).`,
+    steps: [
+      {
+        lines: [1, 1],
+        explanation: 'Import `Protocol` for structural typing, `TypeVar` and `Sequence` for the generic function signature, and `Any` so the dunder method parameters accept any operand type.',
+      },
+      {
+        lines: [3, 7],
+        explanation: 'The Protocol defines the interface purely through method signatures — no implementation, no base class registration. Any object with `__lt__`, `__le__`, `__gt__`, and `__ge__` automatically satisfies `Comparable` — `int`, `str`, `float`, or any custom class. This is structural (duck-type) subtyping.',
+      },
+      {
+        lines: [9, 9],
+        explanation: '`TypeVar("C", bound=Comparable)` creates a **bounded** TypeVar: `C` must be a subtype of `Comparable`. This is stronger than `Any` — the type checker will reject types that don\'t have the comparison methods.',
+      },
+      {
+        lines: [11, 12],
+        explanation: '`sorted(..., reverse=True)` works for any type satisfying the Protocol. The critical benefit of the bounded TypeVar: the return type is `list[C]`, not `list[Any]`. If you pass `list[int]`, you get back `list[int]` — type information is preserved.',
+      },
+    ],
     complexity: 'O(n log n)',
   },
 

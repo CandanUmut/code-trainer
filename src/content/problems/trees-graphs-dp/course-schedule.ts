@@ -61,11 +61,35 @@ def can_finish(n: int, prerequisites: list[list[int]]) -> bool:
         return False
 
     return not any(dfs(i) for i in range(n) if color[i] == 0)`,
-    walkthrough: `We build an adjacency list where \`adj[prereq]\` contains courses that require \`prereq\`.
-
-The three-color DFS: gray nodes are "in progress" on the current recursion path. Hitting a gray neighbor means we've traversed back to a node we're currently processing — that's a cycle.
-
-\`any(dfs(i) for i in range(n) if color[i] == 0)\` handles disconnected graphs by starting a DFS from every unvisited node.`,
+    steps: [
+      {
+        lines: [3, 6],
+        explanation: 'Build the adjacency list: `adj[prereq]` lists all courses that *require* `prereq`. The direction matters — we want to follow the dependency chain forward (from prerequisite toward dependent course) to detect circular dependencies.',
+      },
+      {
+        lines: [8, 9],
+        explanation: '`color` is the three-state array: 0 = unvisited (white), 1 = currently in the DFS call stack (gray), 2 = fully processed (black). The gray/black distinction is what separates cycle detection from simple reachability.',
+      },
+      {
+        lines: [11, 12],
+        explanation: 'At the start of `dfs(node)` we paint the node gray (1), meaning "we are currently exploring this node\'s descendants." If we ever revisit a gray node, we\'ve found a back edge — a cycle.',
+      },
+      {
+        lines: [13, 17],
+        explanation: 'For each neighbor: if it\'s gray (1), we\'ve found a cycle — return `True`. If it\'s still unvisited (0), recurse. If it\'s already black (2), we\'ve already proved it leads to no cycle, so skip it.',
+        stateAfter: [
+          { name: 'gray neighbor found?', value: 'True → cycle detected' },
+        ],
+      },
+      {
+        lines: [18, 19],
+        explanation: 'After exploring all neighbors with no cycle found, paint the node black (2). This marks it as "safe" — future DFS calls that reach this node can skip it entirely.',
+      },
+      {
+        lines: [21, 21],
+        explanation: '`any(dfs(i) ...)` starts DFS from every unvisited node, handling disconnected graphs. We negate the result: if *any* DFS finds a cycle, `can_finish` returns `False` (finishing all courses is impossible).',
+      },
+    ],
     complexity: 'O(V + E) time, O(V + E) space',
   },
 

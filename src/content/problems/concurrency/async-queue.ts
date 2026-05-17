@@ -70,11 +70,32 @@ async def work_pipeline(
     while not result_q.empty():
         results.append(result_q.get_nowait())
     return results`,
-    walkthrough: `We send one \`None\` sentinel per worker — each worker exits when it receives its sentinel. This is cleaner than a shared flag because it avoids race conditions.
-
-\`asyncio.gather\` runs the producer and all workers concurrently. They don't need explicit synchronization because the queue provides it: workers block on \`get()\` when empty, and the producer blocks on \`put()\` when full (if maxsize set).
-
-After gather completes, we drain the result queue. Using \`get_nowait()\` is safe here since no new items can be added.`,
+    steps: [
+      {
+        lines: [3, 9],
+        explanation: 'Two queues serve distinct roles: `work_q` distributes tasks to workers, `result_q` collects outputs. The `int | None` type on `work_q` signals that it can carry either a real task or a sentinel `None` to stop a worker.',
+        stateAfter: [
+          { name: 'work_q', value: 'Queue()  # empty' },
+          { name: 'result_q', value: 'Queue()  # empty' },
+        ],
+      },
+      {
+        lines: [11, 15],
+        explanation: 'The producer pushes all tasks, then sends **one `None` sentinel per worker**. This is the key design: each worker stops when it receives exactly one sentinel. Sending a shared flag or a single sentinel would create a race condition where one worker consumes the signal meant for another.',
+      },
+      {
+        lines: [17, 24],
+        explanation: 'Each worker loops, awaiting tasks. When it receives `None`, it stops. Otherwise it processes the task and puts the result in `result_q`. `task_done()` marks the item consumed — required if anyone calls `queue.join()` to wait for completion.',
+      },
+      {
+        lines: [26, 26],
+        explanation: '`asyncio.gather` runs the producer and all workers concurrently on the same event loop. The queue acts as the synchronization primitive — workers block on `get()` when the queue is empty, and the producer blocks on `put()` if maxsize is set.',
+      },
+      {
+        lines: [27, 30],
+        explanation: 'After gather completes, all workers have exited, so no new items can be added to `result_q`. Using `get_nowait()` in a loop is safe here — there are no concurrent writers left. Return all collected results.',
+      },
+    ],
     complexity: 'O(n) wall time ÷ worker_count (assuming equal task duration)',
   },
 

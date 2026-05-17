@@ -38,11 +38,31 @@ def run_length_encode(s: str) -> str:
         count = sum(1 for _ in group)
         parts.append(f"{count}{ch}" if count > 1 else ch)
     return "".join(parts)`,
-    walkthrough: `\`groupby(s)\` iterates over the string, yielding each run as \`(character, iterator_over_that_run)\`. We convert the group iterator to a count with \`sum(1 for _ in group)\`.
-
-The conditional \`f"{count}{ch}" if count > 1 else ch\` avoids the ugly "1a" encoding for single characters.
-
-\`"".join(parts)\` is the idiomatic way to build strings from a list of pieces — never use \`result += ch\` in a loop (quadratic due to string immutability).`,
+    steps: [
+      {
+        lines: [1, 4],
+        explanation: '`groupby` from `itertools` groups consecutive equal elements. `parts` is the list of encoded pieces we will join at the end — collecting into a list and joining once is O(n), whereas string concatenation in a loop is O(n²) due to string immutability.',
+      },
+      {
+        lines: [5, 5],
+        explanation: '`groupby(s)` yields `(key, group_iterator)` pairs for each run of identical characters. The key is the character itself. **Gotcha:** the group iterator is consumed when the outer loop advances to the next group — you must use it before moving on.',
+        stateAfter: [
+          { name: 'groupby("aaabbb")', value: "('a', <iter>), ('b', <iter>)" },
+        ],
+      },
+      {
+        lines: [6, 6],
+        explanation: '`sum(1 for _ in group)` counts the elements in the run by consuming the group iterator. This is the idiomatic way to count lazily — we never need the actual characters, only the count.',
+      },
+      {
+        lines: [7, 7],
+        explanation: 'The conditional format `f"{count}{ch}" if count > 1 else ch` avoids the "1a" encoding for single characters — "a" is cleaner than "1a". This makes the encoding reversible using the format described in the problem.',
+      },
+      {
+        lines: [8, 8],
+        explanation: '`"".join(parts)` concatenates all pieces in O(n) time. Always prefer `join` over repeated `+=` for building strings from multiple pieces.',
+      },
+    ],
     complexity: 'O(n) time, O(n) space',
   },
 

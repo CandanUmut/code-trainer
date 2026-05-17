@@ -58,11 +58,31 @@ def is_valid_sudoku(board: list[list[str]]) -> bool:
             cols[c].add(val)
             boxes[box].add(val)
     return True`,
-    walkthrough: `We maintain three \`defaultdict(set)\` structures — one per constraint type. For each filled cell, we check all three constraints simultaneously before adding.
-
-The box key \`(r//3, c//3)\` evaluates to one of nine pairs: (0,0), (0,1), (0,2), (1,0), ..., (2,2). Integer division groups rows 0–2 into box-row 0, rows 3–5 into box-row 1, etc.
-
-\`defaultdict(set)\` initializes missing keys to \`set()\` automatically, so \`rows[r].add(val)\` works even if we've never seen row \`r\` before.`,
+    steps: [
+      {
+        lines: [1, 6],
+        explanation: 'Three separate `defaultdict(set)` structures, one per constraint type (rows, columns, boxes). Using `defaultdict` means we never need to explicitly initialize a set before inserting — the first access creates an empty set automatically.',
+      },
+      {
+        lines: [8, 12],
+        explanation: 'We scan every cell with a nested loop. Empty cells (`"."`) are skipped with `continue` — they do not participate in any constraint.',
+      },
+      {
+        lines: [13, 13],
+        explanation: 'The box key `(r // 3, c // 3)` maps each cell to one of nine 3×3 sub-boxes. Integer division groups rows 0–2 into box-row 0, rows 3–5 into box-row 1, etc. This clever formula is worth memorizing.',
+        stateAfter: [
+          { name: 'box key for (r=4, c=7)', value: '(1, 2)' },
+        ],
+      },
+      {
+        lines: [14, 15],
+        explanation: 'All three constraints are checked in a single `or` expression before we record anything. If `val` already appears in that row, column, or box, the board is invalid — return `False` immediately.',
+      },
+      {
+        lines: [16, 19],
+        explanation: 'Only after passing all three checks do we record `val` in the three sets. The final `return True` is reached only if no duplicate was found in any constraint across the entire board.',
+      },
+    ],
     complexity: 'O(1) time and space (board is always 9×9)',
   },
 

@@ -51,11 +51,36 @@ tree = {val:-3, left:{val:-2}, right:{val:-1}}  →  -1  (single node)
 
     dfs(root)
     return int(best[0])`,
-    walkthrough: `We use a list \`best = [float("-inf")]\` as a mutable closure — Python closures can read outer variables but not rebind them without \`nonlocal\`; using a list sidesteps that (alternatively use \`nonlocal best\`).
-
-At each node, \`left\` and \`right\` are clamped to 0 — if a subtree contributes negatively, we don't extend into it.
-
-\`best[0]\` tracks the best path found *anywhere* in the tree, including paths that go through both children (and hence can't be extended upward). The return value \`node.val + max(left, right)\` is the best single-branch path we can offer to the parent.`,
+    steps: [
+      {
+        lines: [1, 2],
+        explanation: '`best = [float("-inf")]` is a mutable single-element list used as a closure variable. Python inner functions can *read* outer variables freely but cannot *rebind* them without `nonlocal`. Wrapping the scalar in a list is a common workaround — mutating `best[0]` is not rebinding `best`.',
+      },
+      {
+        lines: [4, 6],
+        explanation: 'The `dfs` inner function returns the best single-branch path sum extending downward from `node`. The base case returns 0 for `None` — a non-existent child contributes nothing.',
+      },
+      {
+        lines: [7, 8],
+        explanation: '`max(0, dfs(...))` clamps each subtree\'s contribution to at least 0. If a subtree yields a negative sum, we simply do not extend into it — a path that avoids a negative subtree is always better.',
+        stateAfter: [
+          { name: 'left (clamped)', value: 'max(0, left_subtree_sum)' },
+          { name: 'right (clamped)', value: 'max(0, right_subtree_sum)' },
+        ],
+      },
+      {
+        lines: [9, 9],
+        explanation: '`node["val"] + left + right` is the best path that *passes through* this node using both branches. This path cannot be extended to the parent (a path cannot fork), so we only record it globally in `best[0]` rather than returning it.',
+      },
+      {
+        lines: [10, 10],
+        explanation: 'The return value to the parent is the best *single-branch* extension: current node\'s value plus the better of left or right (not both). This represents the longest non-forking path the parent can extend.',
+      },
+      {
+        lines: [12, 13],
+        explanation: 'We kick off DFS from the root and discard its return value — we only care about `best[0]`, the global maximum path found during traversal. `int()` converts from float back to int (since we initialized with `float("-inf")`).',
+      },
+    ],
     complexity: 'O(n) time, O(h) space where h is tree height',
   },
 

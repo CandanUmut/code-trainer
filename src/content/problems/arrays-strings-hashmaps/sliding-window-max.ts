@@ -44,11 +44,31 @@ s = "pwwkew"    →  3  ("wke")
         seen[ch] = right
         max_len = max(max_len, right - left + 1)
     return max_len`,
-    walkthrough: `\`seen[ch]\` stores the last index where \`ch\` appeared. When we encounter \`ch\` again at \`right\`, we only care if its previous position is *inside* the current window (\`seen[ch] >= left\`). If it is, we move \`left\` past it.
-
-Always update \`seen[ch] = right\` even when we shrink — we want the most recent position.
-
-The window \`[left, right]\` always contains no duplicates. Its size is \`right - left + 1\`. We track the maximum over all right positions.`,
+    steps: [
+      {
+        lines: [1, 4],
+        explanation: '`seen` maps each character to the most recent index where it appeared. `left` is the left boundary of the current duplicate-free window. `max_len` tracks the best window size seen so far.',
+      },
+      {
+        lines: [5, 7],
+        explanation: 'When we encounter a character `ch` that is already in `seen` **and** its stored index is inside the current window (`seen[ch] >= left`), we have a duplicate. We jump `left` to `seen[ch] + 1`, instantly skipping past the earlier occurrence instead of inching forward one at a time — this is what keeps the algorithm O(n).',
+        stateAfter: [
+          { name: 'left (after shrink)', value: 'seen[ch] + 1' },
+        ],
+      },
+      {
+        lines: [8, 8],
+        explanation: 'We always overwrite `seen[ch] = right` — even when no shrink happened. This ensures `seen` always holds the *most recent* index of each character, which is needed for the boundary check on future encounters.',
+      },
+      {
+        lines: [9, 9],
+        explanation: 'The window `[left, right]` is now guaranteed to be duplicate-free. Its size is `right - left + 1`. We update `max_len` at every position so the final answer is the maximum window size over all right-pointer positions.',
+      },
+      {
+        lines: [10, 10],
+        explanation: 'After the full scan, `max_len` holds the length of the longest substring without repeating characters.',
+      },
+    ],
     complexity: 'O(n) time, O(min(n, alphabet)) space',
   },
 

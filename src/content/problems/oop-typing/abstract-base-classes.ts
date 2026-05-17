@@ -67,11 +67,32 @@ class User(Serializable):
     @classmethod
     def from_dict(cls, data: dict) -> "User":
         return cls(name=data["name"], age=data["age"], email=data["email"])`,
-    walkthrough: `Stacking \`@classmethod\` and \`@abstractmethod\` (class method first, abstract second) creates an abstract class method — subclasses must provide a \`@classmethod\` implementation.
-
-\`to_json()\` is a **concrete** method in the ABC — it works for any subclass via \`to_dict()\` without knowing the concrete type. This is the Template Method pattern.
-
-\`User\` uses \`@dataclass\` to avoid boilerplate \`__init__\`/\`__repr__\`. The dataclass fields automatically become constructor parameters.`,
+    steps: [
+      {
+        lines: [1, 3],
+        explanation: 'Import the necessary modules: `ABC` and `abstractmethod` from `abc` for defining the interface contract, `dataclass` for the concrete class, and `json` for the concrete serialization method.',
+      },
+      {
+        lines: [5, 11],
+        explanation: 'Define the `Serializable` ABC. `to_dict` is a plain abstract method. `from_dict` stacks `@classmethod` above `@abstractmethod` (order matters — classmethod first) to create an **abstract class method**: subclasses must provide a `@classmethod` implementation.',
+        stateAfter: [
+          { name: 'Serializable.to_dict', value: '<abstractmethod>' },
+          { name: 'Serializable.from_dict', value: '<abstract classmethod>' },
+        ],
+      },
+      {
+        lines: [13, 14],
+        explanation: '`to_json()` is a **concrete** method inside the ABC — it works for any subclass by delegating to the abstract `to_dict()` without knowing the concrete type. This is the Template Method pattern: the ABC defines the algorithm structure, subclasses fill in the pieces.',
+      },
+      {
+        lines: [16, 23],
+        explanation: '`User` uses `@dataclass` to avoid boilerplate `__init__`/`__repr__`. Fields declared as class-level annotations become constructor parameters automatically. Implementing `to_dict` fulfills the abstract contract.',
+      },
+      {
+        lines: [25, 27],
+        explanation: '`from_dict` is implemented as a `@classmethod` — it receives `cls` instead of `self`, allowing it to construct the right subclass without hard-coding `User(...)`. This is why the abstract contract used `@classmethod` too.',
+      },
+    ],
     complexity: 'O(1)',
   },
 

@@ -72,11 +72,36 @@ def min_window(s: str, t: str) -> str:
             left += 1
 
     return s[best[1]:best[2]+1] if best[0] != float("inf") else ""`,
-    walkthrough: `\`need\` counts how many distinct characters are *not yet fully satisfied*. We only decrement it when a character's count in the window first meets its target (not every time it increases).
-
-When \`have == need\`, the window is valid. We record it if it's the best so far, then try to shrink by moving \`left\`. When shrinking removes a character that was exactly at its required count, we decrement \`have\` — the window is no longer valid and we stop shrinking.
-
-Storing \`best\` as \`(length, left, right)\` lets us compare lengths and reconstruct the substring at the end.`,
+    steps: [
+      {
+        lines: [4, 11],
+        explanation: 'Guard for empty inputs, then set up the three core data structures: `need_count` records how many of each character `t` requires; `need` counts how many distinct characters are still unsatisfied; `window` tracks current counts in the sliding window. `best` stores `(length, left, right)` so we can reconstruct the substring at the end.',
+      },
+      {
+        lines: [13, 16],
+        explanation: 'Expand the window rightward. We increment `window[ch]` for the new character. The `have += 1` fires **only** when that character\'s window count first exactly meets its requirement — not on every increase. This prevents over-counting satisfaction.',
+        stateAfter: [
+          { name: 'have', value: 'number of fully-satisfied distinct chars' },
+          { name: 'need', value: 'total distinct chars required' },
+        ],
+      },
+      {
+        lines: [17, 19],
+        explanation: 'When `have == need`, the window contains every required character in sufficient quantity — it is valid. We immediately try to record it as the best if it is shorter than any previous valid window.',
+      },
+      {
+        lines: [20, 23],
+        explanation: 'Shrink the window from the left to find the minimum. We remove `s[left]` from the window. If that character was *exactly* at its required count, losing it breaks satisfaction: `have` decrements and the `while` loop exits, forcing us to expand right again.',
+      },
+      {
+        lines: [24, 24],
+        explanation: '`left += 1` advances the left pointer. This continues the shrinking loop until the window is no longer valid, then we go back to expanding right.',
+      },
+      {
+        lines: [26, 26],
+        explanation: 'After processing the whole string, `best` holds the shortest valid window\'s bounds. If `best[0]` is still infinity, no valid window was ever found and we return `""`. Otherwise slice `s` using the stored `left` and `right` indices.',
+      },
+    ],
     complexity: 'O(|s| + |t|) time, O(|t|) space',
   },
 

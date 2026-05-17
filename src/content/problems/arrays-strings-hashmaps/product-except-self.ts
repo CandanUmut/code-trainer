@@ -55,11 +55,30 @@ nums = [-1, 1, 0, -3, 3]  →  [0, 0, 9, 0, 0]
         suffix *= nums[i]
 
     return result`,
-    walkthrough: `After the first pass, \`result[i]\` holds the product of everything to the *left* of \`i\`.
-
-The second pass (right to left) maintains \`suffix\` — the running product of everything to the *right* of the current index. We multiply it into \`result[i]\` before updating \`suffix *= nums[i]\`.
-
-This avoids allocating two separate prefix/suffix arrays — we reuse the output array and a single integer variable. No division used, handles zeros correctly.`,
+    steps: [
+      {
+        lines: [1, 3],
+        explanation: '`result = [1] * n` allocates the output array pre-filled with 1s. Using 1 as the identity element for multiplication means we can multiply partial products directly into it without a special-case for the first element.',
+      },
+      {
+        lines: [5, 9],
+        explanation: 'The first pass (left to right) fills `result[i]` with the product of all elements **before** index `i`. `prefix` accumulates as we go: before storing into `result[i]`, `prefix` excludes `nums[i]`; then we update `prefix *= nums[i]` so the next index includes it.',
+        stateAfter: [
+          { name: 'result after pass 1 (e.g. [1,2,3,4])', value: '[1, 1, 2, 6]' },
+        ],
+      },
+      {
+        lines: [11, 15],
+        explanation: 'The second pass (right to left) multiplies each `result[i]` by `suffix` — the running product of all elements **after** index `i`. Critically, `result[i] *= suffix` happens **before** `suffix *= nums[i]`, so `suffix` at each position excludes `nums[i]` itself.',
+        stateAfter: [
+          { name: 'result after pass 2 (e.g. [1,2,3,4])', value: '[24, 12, 8, 6]' },
+        ],
+      },
+      {
+        lines: [17, 17],
+        explanation: 'After both passes, `result[i]` contains the product of all elements to the left of `i` multiplied by all elements to the right — exactly the product of everything except `nums[i]`. O(1) extra space because no separate prefix/suffix arrays were allocated.',
+      },
+    ],
     complexity: 'O(n) time, O(1) extra space (output array not counted)',
   },
 

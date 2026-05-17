@@ -71,11 +71,36 @@ class Pair(Generic[T, U]):
 
     def __repr__(self) -> str:
         return f"Pair({self._first!r}, {self._second!r})"`,
-    walkthrough: `\`Generic[T, U]\` declares that \`Pair\` is parameterized by two type variables. The type checker then tracks that \`Pair[int, str].first\` returns \`int\` and \`.second\` returns \`str\`.
-
-\`swap()\` returns \`Pair[U, T]\` — types are reversed. \`map_first(fn)\` introduces a third type variable \`V\` for the return type of \`fn\`.
-
-Forward references (\`"Pair[U, T]"\`) as strings are needed when the class isn't fully defined yet — or use \`from __future__ import annotations\`.`,
+    steps: [
+      {
+        lines: [1, 5],
+        explanation: 'Declare three independent TypeVars: `T` (first element type), `U` (second element type), and `V` (result type for transformations). Each TypeVar is independent — the type checker tracks them separately, enabling precise return-type inference.',
+      },
+      {
+        lines: [7, 10],
+        explanation: '`Generic[T, U]` declares that `Pair` is parameterized by two type variables. The constructor stores both values with their respective types. The type checker will then know that `Pair[int, str]._first` is `int` and `._second` is `str`.',
+        stateAfter: [
+          { name: 'Pair[int, str]._first', value: '<int>' },
+          { name: 'Pair[int, str]._second', value: '<str>' },
+        ],
+      },
+      {
+        lines: [12, 18],
+        explanation: 'Properties expose the private fields with their correct generic return types (`T` and `U`). Using `@property` instead of public attributes makes the pair read-only, which is appropriate for a value type.',
+      },
+      {
+        lines: [20, 21],
+        explanation: '`swap()` returns `Pair[U, T]` — the type parameters are reversed. Forward-referencing the class as a string (`"Pair[U, T]"`) is necessary because the class is not fully defined at the point where the return annotation is evaluated.',
+      },
+      {
+        lines: [23, 24],
+        explanation: '`map_first` introduces a third TypeVar `V` — the return type of `fn`. This is needed because `fn` may change the type of the first element (e.g., `int → str`). The result is `Pair[V, U]`, preserving the second element type exactly.',
+      },
+      {
+        lines: [26, 27],
+        explanation: '`__repr__` uses `!r` formatting to include quotes around strings and other repr-forms. This makes debugging and REPL output clear about the contained values.',
+      },
+    ],
     complexity: 'O(1) per operation',
   },
 

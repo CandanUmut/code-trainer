@@ -37,11 +37,23 @@ def top_k_frequent(nums: list[int], k: int) -> list[int]:
     freq = Counter(nums)
     # nlargest picks k items from the iterable maximizing key
     return heapq.nlargest(k, freq, key=freq.get)`,
-    walkthrough: `\`Counter(nums)\` builds a frequency map in one line — it's a \`dict\` subclass with extra methods.
-
-\`heapq.nlargest(k, iterable, key)\` iterates over \`freq\` (its keys = unique numbers) and returns the k keys with the largest \`freq.get\` values. Internally it maintains a min-heap of size k.
-
-This is cleaner than manually maintaining the heap. For O(n) bucket sort, the logic is more complex but shines when k is large relative to n.`,
+    steps: [
+      {
+        lines: [1, 2],
+        explanation: '`heapq` provides the `nlargest` function that efficiently selects the top-k items without a full sort. `Counter` from `collections` is a `dict` subclass that counts occurrences in one pass.',
+      },
+      {
+        lines: [4, 5],
+        explanation: '`Counter(nums)` builds a frequency map — keys are unique numbers, values are how many times each appears. This is O(n) and far cleaner than manually writing a loop to populate a dict.',
+        stateAfter: [
+          { name: 'freq (e.g. [1,1,1,2,2,3])', value: 'Counter({1: 3, 2: 2, 3: 1})' },
+        ],
+      },
+      {
+        lines: [6, 7],
+        explanation: '`heapq.nlargest(k, freq, key=freq.get)` iterates over the *keys* of `freq` (the unique numbers) and returns the k with the largest values under `freq.get`. It maintains a min-heap of size k internally — O(n log k) total, better than sorting all n elements when k is small.',
+      },
+    ],
     complexity: 'O(n log k) time, O(n) space',
   },
 

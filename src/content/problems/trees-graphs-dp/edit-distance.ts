@@ -54,11 +54,32 @@ word1 = "intention", word2 = "execution"  →  5
                 )
 
     return dp[m][n]`,
-    walkthrough: `\`dp[i][j]\` = min edits to convert \`word1[:i]\` to \`word2[:j]\`.
-
-Base cases: \`dp[i][0] = i\` (delete all of word1), \`dp[0][j] = j\` (insert all of word2).
-
-When characters match, no operation is needed — carry forward the diagonal. When they differ, we pay 1 and take the minimum of the three adjacent DP cells, each corresponding to a different operation.`,
+    steps: [
+      {
+        lines: [1, 3],
+        explanation: '`dp[i][j]` will store the minimum edits to transform `word1[:i]` into `word2[:j]`. Allocating an `(m+1) × (n+1)` table with the extra row/column enables clean base-case handling for empty prefixes.',
+      },
+      {
+        lines: [5, 8],
+        explanation: 'Base cases: `dp[i][0] = i` means transforming `word1[:i]` into an empty string costs `i` deletions. `dp[0][j] = j` means building `word2[:j]` from an empty string costs `j` insertions. These anchor the entire DP table.',
+        stateAfter: [
+          { name: 'dp[0]', value: '[0, 1, 2, ..., n]' },
+          { name: 'dp[i][0]', value: 'i for each row i' },
+        ],
+      },
+      {
+        lines: [10, 13],
+        explanation: 'When `word1[i-1] == word2[j-1]`, the characters already match — no edit is needed for this position. We carry the diagonal value forward: `dp[i][j] = dp[i-1][j-1]`.',
+      },
+      {
+        lines: [14, 19],
+        explanation: 'When characters differ, we pay 1 operation and take the cheapest of three options: delete from `word1` (`dp[i-1][j]`), insert into `word1` (`dp[i][j-1]`), or replace (`dp[i-1][j-1]`). The `min` of these three cells plus 1 gives the optimal subproblem combination.',
+      },
+      {
+        lines: [21, 21],
+        explanation: '`dp[m][n]` is the answer — the minimum edits to transform all of `word1` into all of `word2`.',
+      },
+    ],
     complexity: 'O(m×n) time, O(m×n) space (reducible to O(min(m,n)) with rolling array)',
   },
 

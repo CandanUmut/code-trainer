@@ -81,11 +81,32 @@ def analyze_code(source: str) -> dict:
         "imports": sorted(set(analyzer.imports)),
         "has_eval_exec": analyzer.has_eval_exec,
     }`,
-    walkthrough: `\`ast.parse\` raises \`SyntaxError\` for invalid Python — in production you'd catch it, but here we assume valid input.
-
-\`visit_AsyncFunctionDef = visit_FunctionDef\` is a Python trick to reuse the same handler for two different node types.
-
-\`node.func.id\` is the function name for simple \`Name\` calls like \`eval(...)\`. For method calls like \`obj.eval(...)\`, \`node.func\` is an \`Attribute\`, not a \`Name\` — we skip those (probably fine for a security check).`,
+    steps: [
+      {
+        lines: [1, 4],
+        explanation: '`ast.parse(source)` transforms Python source text into an Abstract Syntax Tree. The tree is an in-memory object graph where each node represents a syntactic construct. This is the foundation for all static analysis.',
+      },
+      {
+        lines: [6, 16],
+        explanation: '`ast.NodeVisitor` dispatches to `visit_<NodeType>` methods automatically. The `__init__` collects results into lists. The assignment `visit_AsyncFunctionDef = visit_FunctionDef` reuses the same handler for both sync and async functions — a Python trick to avoid code duplication.',
+      },
+      {
+        lines: [18, 26],
+        explanation: 'Two separate handlers cover `import X` and `from X import Y`. For dotted modules like `os.path`, `split(".")[0]` extracts just the top-level name. `generic_visit` is called in each handler to recurse into child nodes — without it, nested imports inside functions would be missed.',
+      },
+      {
+        lines: [28, 31],
+        explanation: '`visit_Call` checks for `eval` and `exec` calls. `node.func` is `ast.Name` for simple calls like `eval(...)` and `ast.Attribute` for method calls like `obj.eval(...)`. Checking `isinstance(node.func, ast.Name)` avoids false positives on method calls.',
+      },
+      {
+        lines: [33, 39],
+        explanation: 'Instantiate and run the visitor with `analyzer.visit(tree)`. The results are deduplicated with `set()` and sorted alphabetically for deterministic output. Return as a plain dict.',
+        stateAfter: [
+          { name: 'functions', value: 'sorted list of unique function names' },
+          { name: 'imports', value: 'sorted list of unique top-level module names' },
+        ],
+      },
+    ],
     complexity: 'O(n) where n is number of AST nodes',
   },
 

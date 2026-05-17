@@ -82,11 +82,29 @@ def run_batching() -> list[list[int]]:
     async def _main():
         return [b async for b in async_batch(number_stream(), 3)]
     return asyncio.run(_main())`,
-    walkthrough: `\`async for item in source\` consumes the async iterable lazily — it awaits each item as it arrives. We accumulate items into \`batch\` and yield when it reaches \`batch_size\`.
-
-After the loop, if any items remain (the last incomplete batch), we yield them. The \`if batch:\` guard handles the case where the total count is exactly divisible by \`batch_size\`.
-
-Resetting with \`batch = []\` (not \`batch.clear()\`) is important here — we yielded the reference, and clearing it would mutate the already-yielded list.`,
+    steps: [
+      {
+        lines: [1, 9],
+        explanation: 'The function signature uses `async def` with `yield` inside, making it an **async generator**. The return annotation `AsyncIterator[list[T]]` documents that consumers should use `async for` to iterate. The generic `T` preserves element types through batching.',
+      },
+      {
+        lines: [10, 12],
+        explanation: '`async for item in source` consumes the async iterable lazily — it `await`s each item as it arrives, yielding control to the event loop between items. Items accumulate in `batch`.',
+        stateAfter: [{ name: 'batch (after 3 items)', value: '[0, 1, 2]' }],
+      },
+      {
+        lines: [13, 15],
+        explanation: 'When the batch reaches `batch_size`, yield it and reset with `batch = []`. The reset **must** use `[]` rather than `.clear()` — we already yielded the reference to the old list, and calling `.clear()` would mutate the list the caller received.',
+      },
+      {
+        lines: [16, 17],
+        explanation: 'After the loop ends, any remaining items form the final (possibly partial) batch. The `if batch:` guard handles the edge case where the total count is exactly divisible by `batch_size` — in that case `batch` is empty and we skip the final yield.',
+      },
+      {
+        lines: [24, 27],
+        explanation: '`run_batching` is the synchronous entry point. It uses an async comprehension (`[b async for b in ...]`) inside `asyncio.run`, which starts the event loop and drives the async generator to completion.',
+      },
+    ],
     complexity: 'O(1) memory — only one batch in memory at a time',
   },
 

@@ -1,20 +1,17 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { allProblems } from '../content';
-import { getAllProgress } from '../state/progress';
-import type { Category, Difficulty, ProblemStatus } from '../types';
+import { problemsByCategory } from '../content';
+import { lessonsFor } from '../content/lessons';
+import { getAllProgress, getAllLessonProgress } from '../state/progress';
+import type { Category, Difficulty, Lesson, Problem } from '../types';
 
-const CATEGORIES: Category[] = [
-  'arrays-strings-hashmaps',
-  'trees-graphs-dp',
-  'pythonic-idioms',
-  'oop-typing',
-  'concurrency',
-  'system-python',
+const CATEGORIES: { id: Category; label: string; emoji: string }[] = [
+  { id: 'arrays-strings-hashmaps', label: 'Arrays, Strings & Hash Maps', emoji: '🗂' },
+  { id: 'pythonic-idioms', label: 'Pythonic Idioms', emoji: '🐍' },
+  { id: 'trees-graphs-dp', label: 'Trees, Graphs & DP', emoji: '🌲' },
+  { id: 'oop-typing', label: 'OOP & Typing', emoji: '🏗' },
+  { id: 'concurrency', label: 'Concurrency', emoji: '⚡' },
+  { id: 'system-python', label: 'System Python', emoji: '🔧' },
 ];
-
-const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard'];
-const STATUSES: ProblemStatus[] = ['not-started', 'attempted', 'solved', 'gave-up'];
 
 const DIFFICULTY_COLORS: Record<Difficulty, string> = {
   easy: 'bg-green-100 text-green-700',
@@ -23,127 +20,142 @@ const DIFFICULTY_COLORS: Record<Difficulty, string> = {
 };
 
 export default function Browse() {
-  const progress = getAllProgress();
-  const [search, setSearch] = useState('');
-  const [filterCat, setFilterCat] = useState<Category | ''>('');
-  const [filterDiff, setFilterDiff] = useState<Difficulty | ''>('');
-  const [filterStatus, setFilterStatus] = useState<ProblemStatus | ''>('');
+  const problemProgress = getAllProgress();
+  const lessonProgress = getAllLessonProgress();
 
-  const filtered = allProblems.filter(p => {
-    const status = progress[p.id]?.status ?? 'not-started';
-    if (filterCat && p.category !== filterCat) return false;
-    if (filterDiff && p.difficulty !== filterDiff) return false;
-    if (filterStatus && status !== filterStatus) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      return (
-        p.title.toLowerCase().includes(q) ||
-        p.tags.some(t => t.includes(q)) ||
-        p.category.includes(q)
-      );
-    }
-    return true;
-  });
+  function lessonIcon(lesson: Lesson): string {
+    const status = lessonProgress[lesson.id]?.status ?? 'not-started';
+    return status === 'completed' ? '✅' : status === 'in-progress' ? '🔵' : '⚪';
+  }
+
+  function problemIcon(p: Problem): string {
+    const prog = problemProgress[p.id];
+    if (!prog || prog.status === 'not-started') return '⚪';
+    if (prog.status === 'solved') return '✅';
+    if (prog.status === 'gave-up') return '❌';
+    // 'attempted' — 3+ failed attempts counts as stuck
+    if (prog.attempts >= 3) return '❌';
+    return '🔵';
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="max-w-4xl mx-auto flex items-center gap-4">
-          <Link to="/" className="text-gray-400 hover:text-gray-700 text-sm">← Home</Link>
-          <h1 className="text-xl font-bold text-gray-900">Browse Problems</h1>
+        <div className="max-w-3xl mx-auto flex items-center gap-4">
+          <Link to="/" className="text-gray-400 hover:text-gray-700 text-sm">
+            ← Home
+          </Link>
+          <h1 className="text-xl font-bold text-gray-900">Curriculum</h1>
+          <Link to="/glossary" className="ml-auto text-sm text-blue-600 hover:text-blue-800">
+            📖 Glossary
+          </Link>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 py-8">
-        {/* Filters */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6 flex flex-wrap gap-3">
-          <input
-            type="text"
-            placeholder="Search by title, tag..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm flex-1 min-w-40 focus:outline-none focus:ring-2 focus:ring-blue-200"
-          />
-          <select
-            value={filterCat}
-            onChange={e => setFilterCat(e.target.value as Category | '')}
-            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-          >
-            <option value="">All categories</option>
-            {CATEGORIES.map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-          <select
-            value={filterDiff}
-            onChange={e => setFilterDiff(e.target.value as Difficulty | '')}
-            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-          >
-            <option value="">All difficulties</option>
-            {DIFFICULTIES.map(d => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
-          <select
-            value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value as ProblemStatus | '')}
-            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-          >
-            <option value="">All statuses</option>
-            {STATUSES.map(s => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        </div>
+      <main className="max-w-3xl mx-auto px-6 py-8 space-y-6">
+        <p className="text-sm text-gray-500">
+          Work through the lessons in order — they teach the concepts — then apply them on the
+          problems. Lessons are short (10–20 min) and low-stakes.
+        </p>
 
-        {/* Problem list */}
-        <div className="space-y-2">
-          {filtered.length === 0 && (
-            <p className="text-center text-gray-400 py-12">No problems match your filters.</p>
-          )}
-          {filtered.map(p => {
-            const status = progress[p.id]?.status ?? 'not-started';
-            const attempts = progress[p.id]?.attempts ?? 0;
-            return (
-              <Link
-                key={p.id}
-                to={`/problem/${p.id}`}
-                className="flex items-center gap-4 bg-white border border-gray-200 rounded-xl px-5 py-3 hover:shadow-sm transition-all"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-gray-900 truncate">{p.title}</div>
-                  <div className="flex gap-2 mt-1 flex-wrap">
-                    <span className="text-xs text-gray-400">{p.category}</span>
-                    {p.tags.slice(0, 3).map(t => (
-                      <span key={t} className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
-                        {t}
+        {CATEGORIES.map(cat => {
+          const lessons = lessonsFor(cat.id);
+          const problems = problemsByCategory[cat.id] ?? [];
+          const lessonsDone = lessons.filter(
+            l => lessonProgress[l.id]?.status === 'completed',
+          ).length;
+          const allLessonsDone = lessons.length > 0 && lessonsDone === lessons.length;
+
+          return (
+            <section
+              key={cat.id}
+              className="bg-white rounded-xl border border-gray-200 overflow-hidden"
+            >
+              <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-2">
+                <span className="text-lg">{cat.emoji}</span>
+                <h2 className="font-semibold text-gray-900">{cat.label}</h2>
+              </div>
+
+              <div className="p-5 space-y-5">
+                {/* Lessons */}
+                <div>
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                    📚 Lessons (in order){' '}
+                    {lessons.length > 0 && (
+                      <span className="text-gray-400 normal-case font-normal">
+                        — {lessonsDone}/{lessons.length} complete
                       </span>
-                    ))}
+                    )}
+                  </h3>
+                  {lessons.length === 0 ? (
+                    <p className="text-sm text-gray-400 italic">
+                      Lessons not authored yet — this category is still problem-only.
+                    </p>
+                  ) : (
+                    <div className="space-y-1">
+                      {lessons.map(lesson => (
+                        <Link
+                          key={lesson.id}
+                          to={`/lesson/${lesson.id}`}
+                          className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50"
+                        >
+                          <span>{lessonIcon(lesson)}</span>
+                          <span className="text-sm text-gray-400 w-5">{lesson.order}.</span>
+                          <span className="text-sm text-gray-800 flex-1 truncate">
+                            {lesson.title}
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            {lesson.estimatedMinutes} min
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Problems */}
+                <div>
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                    🎯 Problems (apply what you learned)
+                  </h3>
+                  <div className="space-y-1">
+                    {problems.map(p => {
+                      // A problem's prerequisite lessons are those naming it in appliesTo.
+                      const prereqs = lessons.filter(l => l.appliesTo.includes(p.id));
+                      const prereqsMet =
+                        prereqs.length === 0 ||
+                        prereqs.every(l => lessonProgress[l.id]?.status === 'completed');
+                      const dimmed = lessons.length > 0 && !prereqsMet && !allLessonsDone;
+                      return (
+                        <Link
+                          key={p.id}
+                          to={`/problem/${p.id}`}
+                          className={`flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 ${
+                            dimmed ? 'opacity-50' : ''
+                          }`}
+                          title={
+                            dimmed
+                              ? "You haven't done the lessons for this yet — you can still try."
+                              : undefined
+                          }
+                        >
+                          <span>{problemIcon(p)}</span>
+                          <span className="text-sm text-gray-800 flex-1 truncate">{p.title}</span>
+                          {dimmed && <span className="text-xs text-amber-500">lessons first</span>}
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded-full ${DIFFICULTY_COLORS[p.difficulty]}`}
+                          >
+                            {p.difficulty}
+                          </span>
+                        </Link>
+                      );
+                    })}
                   </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {attempts > 0 && (
-                    <span className="text-xs text-gray-400">{attempts} attempts</span>
-                  )}
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${DIFFICULTY_COLORS[p.difficulty]}`}>
-                    {p.difficulty}
-                  </span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${
-                    status === 'solved'
-                      ? 'bg-green-100 text-green-700'
-                      : status === 'attempted'
-                      ? 'bg-blue-100 text-blue-700'
-                      : status === 'gave-up'
-                      ? 'bg-orange-100 text-orange-600'
-                      : 'bg-gray-100 text-gray-500'
-                  }`}>
-                    {status}
-                  </span>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+              </div>
+            </section>
+          );
+        })}
       </main>
     </div>
   );

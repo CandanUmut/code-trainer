@@ -61,11 +61,24 @@ class Rectangle:
 
     def __le__(self, other: "Rectangle") -> bool:
         return self.area <= other.area`,
-    walkthrough: `\`__post_init__\` runs after the auto-generated \`__init__\` — it's the place for validation logic. With \`frozen=True\`, you can't set attributes normally in \`__post_init__\`, but reading is fine.
-
-We implement ordering manually (by area) rather than using \`order=True\`, because \`order=True\` would sort by \`(width, height)\` tuple, not area.
-
-\`cached_property\` would be ideal for \`area\` but doesn't work with frozen dataclasses (it needs to write to the instance dict). Regular \`@property\` is fine here.`,
+    steps: [
+      {
+        lines: [4, 7],
+        explanation: '`@dataclass(frozen=True, order=False)` — `frozen=True` makes instances immutable (hashable, usable as dict keys or set members). We use `order=False` because the default `order=True` would sort by `(width, height)` tuple, but we want ordering by *area*.',
+      },
+      {
+        lines: [9, 11],
+        explanation: '`__post_init__` is called automatically after the generated `__init__`. It is the idiomatic place for validation — any `ValueError` raised here propagates from the constructor. With `frozen=True`, reading attributes is fine; writing (other than via `object.__setattr__`) is not.',
+      },
+      {
+        lines: [13, 19],
+        explanation: '`area` and `perimeter` are read-only `@property` attributes — computed on demand from `width` and `height`. `cached_property` would be more efficient for repeated access but requires writing to the instance dict, which `frozen=True` forbids.',
+      },
+      {
+        lines: [21, 25],
+        explanation: 'Custom `__lt__` and `__le__` implement ordering by area rather than by field order. This is why we set `order=False` — we must implement comparisons ourselves to use `area` as the sort key. Python\'s `sorted()` and `heapq` only need `__lt__`.',
+      },
+    ],
     complexity: 'O(1) per operation',
   },
 

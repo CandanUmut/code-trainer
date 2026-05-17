@@ -42,11 +42,32 @@ def group_anagrams(strs: list[str]) -> list[list[str]]:
         key = tuple(sorted(word))
         groups[key].append(word)
     return list(groups.values())`,
-    walkthrough: `\`sorted(word)\` gives a list of characters in alphabetical order — the same for every anagram. We convert it to a \`tuple\` so it's hashable (lists can't be dict keys).
-
-\`defaultdict(list)\` automatically initializes missing keys to \`[]\`, so we can always call \`.append\` without a guard.
-
-After one pass over all words, each group is a value in \`groups\`. We return \`list(groups.values())\` — the order of groups doesn't matter per the problem.`,
+    steps: [
+      {
+        lines: [1, 1],
+        explanation: '`defaultdict` from `collections` is imported because it auto-initializes missing keys. This avoids the boilerplate `if key not in d: d[key] = []` before every `.append`.',
+      },
+      {
+        lines: [3, 4],
+        explanation: '`groups` maps each canonical anagram key (a sorted-character tuple) to the list of words sharing that key. Using a typed `defaultdict[tuple[str,...], list[str]]` makes the structure self-documenting and avoids explicit key-existence checks.',
+      },
+      {
+        lines: [5, 6],
+        explanation: '`sorted(word)` returns the characters in alphabetical order — identical for every anagram. The result is converted to a `tuple` because lists are unhashable and cannot be dict keys. This canonical form is the insight that makes the grouping work.',
+        stateAfter: [
+          { name: 'key for "eat"', value: "('a', 'e', 't')" },
+          { name: 'key for "tea"', value: "('a', 'e', 't')" },
+        ],
+      },
+      {
+        lines: [7, 7],
+        explanation: '`.append(word)` adds the original (unsorted) word to its group. Because `defaultdict` creates an empty list on first access, this works even for the first word in any anagram group — no guard needed.',
+      },
+      {
+        lines: [8, 8],
+        explanation: '`groups.values()` yields each list of anagrams. Wrapping in `list()` converts the dict_values view to a concrete list. The order of groups does not matter per the problem statement.',
+      },
+    ],
     complexity: 'O(n·k log k) time where k is max word length, O(n·k) space',
   },
 

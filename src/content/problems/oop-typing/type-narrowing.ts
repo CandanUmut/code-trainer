@@ -77,11 +77,32 @@ def area(shape: Shape) -> float:
 
 def total_area(shapes: list[Shape]) -> float:
     return sum(area(s) for s in shapes)`,
-    walkthrough: `The \`match\` statement does **structural pattern matching** on dataclasses — \`case Circle(radius=r)\` binds the \`radius\` field to \`r\`. This is more concise than \`if isinstance(shape, Circle): r = shape.radius\`.
-
-The type checker (mypy/pyright) knows that \`match\` on a \`Circle | Rectangle\` with both cases covered is exhaustive. If you add a new shape variant, the type checker will warn that the match isn't exhaustive.
-
-No \`case _:\` fallback is needed — but adding one with \`raise TypeError(f"Unknown shape: {shape}")\` makes runtime behavior explicit.`,
+    steps: [
+      {
+        lines: [1, 3],
+        explanation: 'Import `dataclass` for boilerplate-free classes, `Literal` for discriminant fields, and `math` for the circle area formula. `Literal` is the key type that makes the union discriminated.',
+      },
+      {
+        lines: [5, 14],
+        explanation: 'Each shape is a dataclass with a `kind` field of type `Literal["circle"]` or `Literal["rect"]`. The literal type constrains the field to a single string value, which allows the type checker to distinguish union members based on that field alone.',
+        stateAfter: [
+          { name: 'Circle().kind', value: '"circle"' },
+          { name: 'Rectangle().kind', value: '"rect"' },
+        ],
+      },
+      {
+        lines: [16, 16],
+        explanation: '`Shape = Circle | Rectangle` defines the union type alias. The type checker now knows that any `Shape` value is exactly one of the two dataclasses.',
+      },
+      {
+        lines: [18, 23],
+        explanation: '`match shape:` does **structural pattern matching** on dataclasses. `case Circle(radius=r)` binds the `radius` field to `r` in one step — far more concise than `if isinstance(shape, Circle): r = shape.radius`. Both cases cover the full union, so the type checker treats this as exhaustive.',
+      },
+      {
+        lines: [25, 26],
+        explanation: '`total_area` uses a generator expression passed to `sum`. This is idiomatic Python: avoid accumulating into a list when you only need the final aggregate. The call to `area(s)` dispatches via `match` for each shape.',
+      },
+    ],
     complexity: 'O(n)',
   },
 

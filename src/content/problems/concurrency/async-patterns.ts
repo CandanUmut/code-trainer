@@ -52,11 +52,32 @@ async def retry_with_backoff(
             if attempt < max_attempts - 1:
                 await asyncio.sleep(base_delay * (2 ** attempt))
     raise last_exc`,
-    walkthrough: `\`fn\` must be a *factory* (callable returning a coroutine) rather than a coroutine itself — coroutines can only be awaited once, so each retry needs a fresh coroutine.
-
-The backoff delay doubles each attempt: 0.1s, 0.2s, 0.4s, ... This prevents hammering a recovering service.
-
-We save \`last_exc\` and raise it after the loop so the caller sees the actual error, not a \`None\` raise or a bare \`raise\` outside an except block.`,
+    steps: [
+      {
+        lines: [1, 7],
+        explanation: '`fn` is typed as a **callable** (a factory) rather than a coroutine. Coroutines can only be awaited once — passing a coroutine object directly would fail on the second retry. The factory pattern lets each attempt call `fn()` to get a fresh coroutine.',
+      },
+      {
+        lines: [8, 9],
+        explanation: '`last_exc` is initialized to `None` and updated on each failure. This is necessary because we need to `raise` the exception after the loop, outside of any `except` block — a bare `raise` only works inside an active exception handler.',
+      },
+      {
+        lines: [10, 13],
+        explanation: 'Each attempt calls the factory `fn()` to get a fresh coroutine and awaits it. On success, return immediately. On any exception, capture it in `last_exc` — this preserves the exception for later re-raising.',
+        stateAfter: [
+          { name: 'attempt (on failure)', value: '0' },
+          { name: 'last_exc', value: 'Exception(...)' },
+        ],
+      },
+      {
+        lines: [14, 15],
+        explanation: 'The exponential backoff delay: `base_delay * (2 ** attempt)` gives 0.1s, 0.2s, 0.4s, 0.8s... We only sleep if there are more attempts remaining — no point sleeping after the final failure.',
+      },
+      {
+        lines: [16, 16],
+        explanation: 'After exhausting all attempts, raise the last captured exception. This ensures the caller sees the actual error. A bare `raise` here would fail because we\'re not inside an `except` block at this point.',
+      },
+    ],
     complexity: 'O(max_attempts) attempts, O(2^max_attempts * base_delay) worst-case time',
   },
 

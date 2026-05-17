@@ -55,11 +55,25 @@ def run_fetch_all(requests: list[tuple[str, float, bool]]) -> list[str]:
         f"ERROR: {r}" if isinstance(r, Exception) else r
         for r in results
     ]`,
-    walkthrough: `\`asyncio.gather\` returns results in the same order as the input coroutines, regardless of completion order. This is crucial for mapping results back to requests.
-
-\`return_exceptions=True\` prevents one failure from cancelling all pending tasks — each exception is returned as a value at its index.
-
-\`asyncio.run()\` is the entry point for synchronous code calling async code. In real applications the event loop is already running; here we use \`run()\` for the outermost call.`,
+    steps: [
+      {
+        lines: [3, 7],
+        explanation: '`mock_fetch` simulates async I/O by sleeping for `delay` seconds, then either raising `ConnectionError` or returning a success string. This is the standard pattern for mocking network calls in tests without actual HTTP.',
+      },
+      {
+        lines: [9, 10],
+        explanation: 'Build the list of coroutines from a list comprehension — each `mock_fetch(...)` call creates a coroutine object but does NOT start executing it yet. Coroutines only run when awaited.',
+      },
+      {
+        lines: [11, 12],
+        explanation: '`asyncio.gather(*coros, return_exceptions=True)` runs all coroutines **concurrently** on the same event loop. The critical option is `return_exceptions=True`: without it, the first failure would cancel all pending coroutines. With it, exceptions are returned as values at their index — results preserve input order regardless of which coroutine finishes first.',
+        stateAfter: [{ name: 'results order', value: 'same as input coroutines, not completion order' }],
+      },
+      {
+        lines: [14, 19],
+        explanation: '`asyncio.run()` creates a new event loop, runs the coroutine to completion, and cleans up. It\'s the synchronous entry point. The list comprehension then distinguishes errors from successes using `isinstance(r, Exception)`, formatting each appropriately.',
+      },
+    ],
     complexity: 'O(max delay) wall time, O(n) total CPU',
   },
 

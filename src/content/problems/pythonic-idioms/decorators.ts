@@ -73,11 +73,31 @@ def memoize(fn: F) -> F:
 
     wrapper.cache_info = cache_info  # type: ignore[attr-defined]
     return wrapper  # type: ignore[return-value]`,
-    walkthrough: `\`nonlocal hits, misses\` lets the inner \`wrapper\` rebind the outer variables — necessary because we're reassigning them, not just mutating.
-
-We use \`args\` (a tuple) as the cache key. This works for positional arguments; for kwargs you'd need to include them too (e.g., sort and tuple the items).
-
-Attaching \`cache_info\` directly to the wrapper function as an attribute is a common pattern for "side channels" on decorated functions. \`functools.lru_cache\` does the same thing.`,
+    steps: [
+      {
+        lines: [1, 9],
+        explanation: '`@wraps(fn)` is imported so the wrapper preserves the original function\'s `__name__`, `__doc__`, etc. The three closure variables — `cache`, `hits`, `misses` — are shared state that persists across all calls to the wrapped function.',
+      },
+      {
+        lines: [11, 13],
+        explanation: '`@wraps(fn)` is applied to `wrapper` so introspection tools see the original function\'s metadata. `nonlocal hits, misses` is required because we *rebind* (reassign) these integers — without it Python would treat them as local variables and raise `UnboundLocalError`.',
+      },
+      {
+        lines: [14, 16],
+        explanation: 'Cache hit path: `args` (a tuple of positional arguments) is the key. If we\'ve seen this argument combination before, increment `hits` and return the cached result immediately — the real function is never called.',
+        stateAfter: [
+          { name: 'cache key (e.g. fib(5))', value: '(5,)' },
+        ],
+      },
+      {
+        lines: [17, 20],
+        explanation: 'Cache miss path: increment `misses`, call the real function, store the result under `args`, then return it. The next call with the same arguments will hit the cache.',
+      },
+      {
+        lines: [22, 26],
+        explanation: '`cache_info` is a closure over `hits` and `misses` — it reads the live values whenever called. Attaching it as an attribute of `wrapper` is the standard pattern for exposing metadata on decorated functions (exactly what `functools.lru_cache` does with its `cache_info()`).',
+      },
+    ],
     complexity: 'O(1) amortized per call after first call',
   },
 

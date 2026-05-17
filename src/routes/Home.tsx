@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { allProblems, problemsByCategory } from '../content';
-import { getAllProgress } from '../state/progress';
+import { allLessons, lessonsFor } from '../content/lessons';
+import { getAllProgress, getAllLessonProgress } from '../state/progress';
 import type { Category, ProblemStatus } from '../types';
 import ProgressBar from '../components/ProgressBar';
 
@@ -52,8 +53,11 @@ const STATUS_COLORS: Record<ProblemStatus, string> = {
 
 export default function Home() {
   const progress = getAllProgress();
+  const lessonProgress = getAllLessonProgress();
   const totalSolved = Object.values(progress).filter(p => p.status === 'solved').length;
   const totalProblems = allProblems.length;
+  const lessonsDone = Object.values(lessonProgress).filter(l => l.status === 'completed').length;
+  const totalLessons = allLessons.length;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -62,41 +66,61 @@ export default function Home() {
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Python Interview Trainer</h1>
-            <p className="text-sm text-gray-500">Learn by doing — no login, no backend, runs in your browser</p>
+            <p className="text-sm text-gray-500">
+              Learn by doing — lessons teach the concepts, problems test them. No login, runs in
+              your browser.
+            </p>
           </div>
-          <Link
-            to="/browse"
-            className="text-sm bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
-          >
-            Browse All
-          </Link>
+          <div className="flex gap-2">
+            <Link
+              to="/glossary"
+              className="text-sm border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50"
+            >
+              Glossary
+            </Link>
+            <Link
+              to="/browse"
+              className="text-sm bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              Open Curriculum
+            </Link>
+          </div>
         </div>
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-8">
         {/* Progress Summary */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-8">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-gray-800">Overall Progress</h2>
-            <span className="text-sm text-gray-500">
-              {totalSolved} / {totalProblems} solved
-            </span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold text-gray-800">Lessons</h2>
+              <span className="text-sm text-gray-500">
+                {lessonsDone} / {totalLessons} complete
+              </span>
+            </div>
+            <ProgressBar value={lessonsDone} max={Math.max(1, totalLessons)} />
           </div>
-          <ProgressBar value={totalSolved} max={totalProblems} />
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold text-gray-800">Problems</h2>
+              <span className="text-sm text-gray-500">
+                {totalSolved} / {totalProblems} solved
+              </span>
+            </div>
+            <ProgressBar value={totalSolved} max={totalProblems} />
+          </div>
         </div>
 
         {/* Category Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {(Object.entries(CATEGORY_META) as [Category, typeof CATEGORY_META[Category]][]).map(
+          {(Object.entries(CATEGORY_META) as [Category, (typeof CATEGORY_META)[Category]][]).map(
             ([cat, meta]) => {
               const problems = problemsByCategory[cat] ?? [];
+              const lessons = lessonsFor(cat);
               const solved = problems.filter(p => progress[p.id]?.status === 'solved').length;
-              const _attempted = problems.filter(
-                p =>
-                  progress[p.id]?.status === 'attempted' ||
-                  progress[p.id]?.status === 'gave-up',
+              const catLessonsDone = lessons.filter(
+                l => lessonProgress[l.id]?.status === 'completed',
               ).length;
-              void _attempted;
 
               return (
                 <div
@@ -116,9 +140,26 @@ export default function Home() {
                     </span>
                   </div>
 
-                  <ProgressBar value={solved} max={problems.length} className="mb-4" />
+                  <ProgressBar value={solved} max={problems.length} className="mb-3" />
 
-                  <div className="space-y-1 max-h-48 overflow-y-auto">
+                  {/* Lessons row */}
+                  {lessons.length > 0 ? (
+                    <Link
+                      to="/browse"
+                      className="flex items-center justify-between text-sm bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-lg px-3 py-2 mb-3"
+                    >
+                      <span>
+                        📚 {lessons.length} lessons · {catLessonsDone} done
+                      </span>
+                      <span>Start →</span>
+                    </Link>
+                  ) : (
+                    <div className="text-xs text-gray-400 italic mb-3">
+                      Lessons coming soon — problems only for now.
+                    </div>
+                  )}
+
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
                     {problems.map(p => {
                       const status = progress[p.id]?.status ?? 'not-started';
                       return (

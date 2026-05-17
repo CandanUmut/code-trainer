@@ -49,9 +49,13 @@ def _deep_equal(a, b):
     if isinstance(a, (set, frozenset)) and isinstance(b, (set, frozenset)):
         return set(a) == set(b)
     if isinstance(a, dict) and isinstance(b, dict):
-        if set(a.keys()) != set(b.keys()):
+        # JSON object keys are always strings, so compare keys as strings — this
+        # lets an int-keyed Python dict match its JSON-authored expected value.
+        a_s = {str(k): v for k, v in a.items()}
+        b_s = {str(k): v for k, v in b.items()}
+        if set(a_s.keys()) != set(b_s.keys()):
             return False
-        return all(_deep_equal(a[k], b[k]) for k in a)
+        return all(_deep_equal(a_s[k], b_s[k]) for k in a_s)
     if isinstance(a, (list, tuple)) and isinstance(b, (list, tuple)):
         if len(a) != len(b):
             return False
@@ -215,4 +219,174 @@ _out
 
 export function isPyodideLoaded(): boolean {
   return pyodideInstance !== null;
+}
+
+// ===========================================================================
+// Lesson step runners — all share the single Pyodide instance loaded above.
+// Each Python template ends by leaving a JSON string as the last expression so
+// runPythonAsync hands us back a plain string.
+// ===========================================================================
+
+const STEP_TIMEOUT_MS = 3000;
+
+/** Run a Python template whose last expression is a JSON string; parse it. */
+async function runJsonTemplate<T>(template: string, timeoutValue: T): Promise<T> {
+  const pyodide = await loadPyodide();
+
+  const timeoutPromise = new Promise<T>(resolve =>
+    setTimeout(() => resolve(timeoutValue), STEP_TIMEOUT_MS),
+  );
+
+  const runPromise = (async (): Promise<T> => {
+    const jsonStr = await pyodide.runPythonAsync(template);
+    return JSON.parse(String(jsonStr)) as T;
+  })();
+
+  return Promise.race([runPromise, timeoutPromise]);
+}
+
+export type PredictResult = {
+  stdout: string;
+  error?: string;
+  timedOut?: boolean;
+};
+
+/** Run a self-contained snippet and capture its stdout (for predict-output). */
+export async function runPredictOutput(code: string): Promise<PredictResult> {
+  const template = `
+import io as _io, contextlib as _ctx, json as _json, traceback as _tb
+_buf = _io.StringIO()
+_out = None
+try:
+    with _ctx.redirect_stdout(_buf):
+        exec(${JSON.stringify(code)}, {})
+    _out = _json.dumps({"stdout": _buf.getvalue(), "error": None})
+except Exception:
+    _out = _json.dumps({"stdout": _buf.getvalue(), "error": _tb.format_exc()})
+_out
+`;
+  return runJsonTemplate<PredictResult>(template, {
+    stdout: '',
+    error: 'Timeout — possible infinite loop (3s limit)',
+    timedOut: true,
+  });
+}
+
+export type CheckResult = {
+  passed: boolean;
+  actual?: unknown;
+  stdout?: string;
+  error?: string;
+  timedOut?: boolean;
+};
+
+const TIMEOUT_CHECK: CheckResult = {
+  passed: false,
+  error: 'Timeout — possible infinite loop (3s limit)',
+  timedOut: true,
+};
+
+/** write-line, expression mode: eval the user's expression against a namespace. */
+export async function runWriteLineExpression(
+  setup: string,
+  expr: string,
+  expected: unknown,
+): Promise<CheckResult> {
+  const template = `
+import json as _json, traceback as _tb
+_out = None
+try:
+    _ns = {}
+    exec(${JSON.stringify(setup)}, _ns)
+    _val = eval(${JSON.stringify(expr)}, _ns)
+    _expected = _json.loads(${JSON.stringify(JSON.stringify(expected))})
+    _passed = _deep_equal(_val, _expected)
+    _out = _json.dumps({"passed": bool(_passed), "actual": _serialize(_val), "error": None})
+except Exception:
+    _out = _json.dumps({"passed": False, "actual": None, "error": _tb.format_exc()})
+_out
+`;
+  return runJsonTemplate<CheckResult>(template, TIMEOUT_CHECK);
+}
+
+/** write-line, statement mode: run setup + statement, then check a variable. */
+export async function runWriteLineStatement(
+  setup: string,
+  statement: string,
+  varName: string,
+  expected: unknown,
+): Promise<CheckResult> {
+  const code = `${setup}\n${statement}`;
+  const template = `
+import json as _json, traceback as _tb
+_out = None
+try:
+    _ns = {}
+    exec(${JSON.stringify(code)}, _ns)
+    if ${JSON.stringify(varName)} not in _ns:
+        raise NameError("Variable '${varName}' was never assigned.")
+    _val = _ns[${JSON.stringify(varName)}]
+    _expected = _json.loads(${JSON.stringify(JSON.stringify(expected))})
+    _passed = _deep_equal(_val, _expected)
+    _out = _json.dumps({"passed": bool(_passed), "actual": _serialize(_val), "error": None})
+except Exception:
+    _out = _json.dumps({"passed": False, "actual": None, "error": _tb.format_exc()})
+_out
+`;
+  return runJsonTemplate<CheckResult>(template, TIMEOUT_CHECK);
+}
+
+/**
+ * fill-in-blank validation: run the fully assembled code, then check stdout
+ * and/or a variable value, depending on which validation fields are present.
+ */
+export async function runFillInValidation(
+  assembledCode: string,
+  validation: { expectedStdout?: string; expectedVar?: { name: string; value: unknown } },
+): Promise<CheckResult> {
+  const varName = validation.expectedVar?.name ?? null;
+  const expectedVarJson =
+    validation.expectedVar !== undefined
+      ? JSON.stringify(JSON.stringify(validation.expectedVar.value))
+      : 'null';
+
+  const template = `
+import io as _io, contextlib as _ctx, json as _json, traceback as _tb
+_buf = _io.StringIO()
+_out = None
+try:
+    _ns = {}
+    with _ctx.redirect_stdout(_buf):
+        exec(${JSON.stringify(assembledCode)}, _ns)
+    _var_ok = True
+    _actual = None
+    ${
+      varName
+        ? `if ${JSON.stringify(varName)} not in _ns:
+        raise NameError("Variable '${varName}' was never assigned.")
+    _actual = _ns[${JSON.stringify(varName)}]
+    _var_ok = _deep_equal(_actual, _json.loads(${expectedVarJson}))`
+        : ''
+    }
+    _out = _json.dumps({
+        "passed": bool(_var_ok),
+        "actual": _serialize(_actual),
+        "stdout": _buf.getvalue(),
+        "error": None,
+    })
+except Exception:
+    _out = _json.dumps({
+        "passed": False, "actual": None, "stdout": _buf.getvalue(),
+        "error": _tb.format_exc(),
+    })
+_out
+`;
+  const result = await runJsonTemplate<CheckResult>(template, TIMEOUT_CHECK);
+  if (result.timedOut || result.error) return result;
+  // stdout check is done JS-side so we can rstrip consistently
+  if (validation.expectedStdout !== undefined) {
+    const stdoutOk = (result.stdout ?? '').replace(/\s+$/, '') === validation.expectedStdout.replace(/\s+$/, '');
+    return { ...result, passed: result.passed && stdoutOk };
+  }
+  return result;
 }

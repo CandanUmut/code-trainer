@@ -53,11 +53,24 @@ def timer():
         yield result
     finally:
         result.elapsed = time.perf_counter() - start`,
-    walkthrough: `We yield a \`TimerResult\` dataclass instance — a mutable object that the \`with\` block receives via \`as t\`. Because it's mutable, we can update \`result.elapsed\` in the \`finally\` block after the body has run.
-
-\`time.perf_counter()\` is higher precision than \`time.time()\` for measuring short durations.
-
-The \`try/finally\` ensures timing is recorded even if the block raises an exception.`,
+    steps: [
+      {
+        lines: [5, 7],
+        explanation: '`TimerResult` is a simple dataclass holding only the `elapsed` float. Wrapping the result in a dataclass (rather than returning a plain float) is necessary because the `with ... as t` binding happens *before* the block runs — we need a mutable container to write into *after* the block completes.',
+      },
+      {
+        lines: [9, 12],
+        explanation: '`@contextmanager` transforms a generator into a context manager. We create the result object and record the start time *before* yielding — this becomes the `__enter__` phase. `time.perf_counter()` is used instead of `time.time()` for sub-millisecond precision.',
+      },
+      {
+        lines: [13, 14],
+        explanation: '`yield result` suspends the generator and passes `result` to the `as t` variable in the caller\'s `with` statement. The caller\'s block body runs at this suspension point.',
+      },
+      {
+        lines: [15, 16],
+        explanation: '`finally` guarantees this block runs whether the body exited normally or raised an exception — this becomes the `__exit__` phase. We compute elapsed time and write it into `result.elapsed`, which the caller can read via `t.elapsed`.',
+      },
+    ],
     complexity: 'O(1)',
   },
 

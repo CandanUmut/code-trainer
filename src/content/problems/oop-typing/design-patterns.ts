@@ -58,11 +58,29 @@ class EventBus:
     def publish(self, event: str, data: Any = None) -> None:
         for handler in list(self._listeners[event]):  # copy to handle unsubscribe during publish
             handler(data)`,
-    walkthrough: `\`defaultdict(list)\` initializes missing event keys to \`[]\`, so \`subscribe\` can always append without checking.
-
-\`unsubscribe\` uses \`list.remove\` which removes the first occurrence. We swallow \`ValueError\` if the handler wasn't registered — idiomatic for observer cleanup.
-
-\`list(self._listeners[event])\` creates a copy before iterating — if a handler unsubscribes itself during a publish, the copy ensures we don't skip handlers due to list mutation.`,
+    steps: [
+      {
+        lines: [1, 2],
+        explanation: 'Import `defaultdict` for the listener registry and `Callable`/`Any` for type annotations. These choices directly enable the implementation strategy.',
+      },
+      {
+        lines: [4, 6],
+        explanation: '`defaultdict(list)` initializes missing event keys to `[]` automatically, so `subscribe` can always call `.append` without a "key exists?" check. This is the key insight that makes the data structure clean.',
+        stateAfter: [{ name: '_listeners', value: 'defaultdict(<class list>, {})' }],
+      },
+      {
+        lines: [8, 9],
+        explanation: '`subscribe` simply appends the handler. Because `_listeners` is a `defaultdict`, accessing a new event key auto-creates an empty list — no guard needed.',
+      },
+      {
+        lines: [11, 15],
+        explanation: '`unsubscribe` uses `list.remove`, which removes the **first** occurrence of the handler. Swallowing `ValueError` makes this idempotent — calling unsubscribe on a handler that was never registered is a no-op, which is the expected behavior in observer cleanup.',
+      },
+      {
+        lines: [17, 19],
+        explanation: '`list(self._listeners[event])` creates a **snapshot copy** before iterating. This is critical: if a handler calls `unsubscribe` on itself during a publish, mutating the live list would cause iteration to skip the next handler. The copy prevents that bug.',
+      },
+    ],
     complexity: 'O(n) publish where n = number of handlers for that event',
   },
 
