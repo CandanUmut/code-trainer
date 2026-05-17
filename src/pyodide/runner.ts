@@ -27,13 +27,18 @@ import json
 import traceback
 
 def _serialize(obj):
+    """Convert any Python value to something json.dumps can handle."""
     if isinstance(obj, (set, frozenset)):
-        return {"__type__": "set", "values": sorted(str(v) for v in obj)}
+        # Represent as sorted list so JS can display it
+        return sorted(_serialize(v) for v in obj)
     if isinstance(obj, dict):
-        return {"__type__": "dict", "items": {str(k): _serialize(v) for k, v in obj.items()}}
+        return {str(k): _serialize(v) for k, v in obj.items()}
     if isinstance(obj, (list, tuple)):
         return [_serialize(v) for v in obj]
-    return obj
+    if isinstance(obj, (int, float, bool, str)) or obj is None:
+        return obj
+    # Fallback: repr for unknown types
+    return repr(obj)
 
 def _deep_equal(a, b):
     if isinstance(a, float) or isinstance(b, float):
@@ -114,11 +119,10 @@ async function runSingleTest(
   const inputJson = JSON.stringify(test.input);
   const expectedJson = JSON.stringify(test.expected);
 
+  // Return a JSON string — PyProxy dot-access is unreliable, plain string is safe
   const testCode = `
 import json as _json
 import traceback as _traceback
-
-_result = {"passed": False, "actual": None, "error": None}
 
 try:
     _ns = {}
@@ -133,20 +137,10 @@ try:
     _actual = _fn(*_inputs)
 
     _passed = _deep_equal(_actual, _expected)
-    _result = {
-        "passed": _passed,
-        "actual": _serialize(_actual),
-        "error": None
-    }
+    _json.dumps({"passed": bool(_passed), "actual": _serialize(_actual), "error": None})
 except Exception as _e:
     _tb = _traceback.format_exc()
-    _result = {
-        "passed": False,
-        "actual": None,
-        "error": _tb
-    }
-
-_result
+    _json.dumps({"passed": False, "actual": None, "error": _tb})
 `;
 
   const TIMEOUT_MS = 3000;
@@ -170,7 +164,10 @@ _result
 
   const runPromise: Promise<TestResult> = (async () => {
     try {
-      const raw = (await pyodide.runPythonAsync(testCode)) as {
+      // runPythonAsync returns the last expression value as a PyProxy.
+      // We return a JSON string from Python so we get a plain JS string here.
+      const jsonStr = await pyodide.runPythonAsync(testCode);
+      const raw = JSON.parse(String(jsonStr)) as {
         passed: boolean;
         actual: unknown;
         error: string | null;
